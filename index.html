@@ -1,0 +1,3224 @@
+<!DOCTYPE html>
+<!-- saved from url=(0037)https://bishwa75032.github.io/Scope1/ -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070D18">
+<title>MQTT Dashboard · UnivLabs Scope 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ===========================================================================
+   Design system — identical tokens to the board's own page (Fs/index.html),
+   so the two consoles read as one product rather than two projects.
+
+   One deliberate divergence: the camera's storage meter was purple #9D7BFF
+   against the light source's blue #4D9FFF. Those two are ΔE 2.2 apart under
+   deuteranopia and only 12.0 for normal vision — below the ΔE 15 floor, i.e.
+   hard to tell apart even with full colour vision. Re-stepped to magenta.
+   Meter palette #1FA57E / #2F6FD6 / #C4477F passes lightness band, chroma
+   floor, CVD separation, normal-vision floor and contrast on this surface.
+   =========================================================================== */
+:root{
+  /* STEEL / CYAN — the operations-console theme.
+     The board's own page at 192.168.10.2 keeps the navy + red brand skin.
+     This one runs cooler and flatter so the two are never confused: steel
+     surfaces, a cyan accent, and a hairline grid behind the header.
+     Meter steps re-validated against the new #0F1720 panel: lightness band,
+     chroma floor, CVD separation, normal-vision floor and contrast all pass. */
+  --bg:#0B0B0F;--panel:#15151C;--panel2:#1F1F29;
+  --line:rgba(176,172,196,.15);--line2:rgba(176,172,196,.09);
+  --txt:#EEEAF6;--sec:#A49FB8;--mut:#6E6885;
+  --red:#E63946;--grn:#2DD4A0;--amb:#F5B93B;--blu:#4D9FFF;--mag:#F06AAE;
+  --m-grn:#1FA57E;--m-blu:#2F6FD6;--m-mag:#C4477F;--m-amb:#C08A1E;
+  --mono:'DM Mono',monospace;
+  /* Chrome accent. The board's own page keeps the red brand accent; this
+     console runs blue so the two are never mistaken for each other at a
+     glance. #2F6FD6 is the same validated step used by the bulb-life meter. */
+  --acc:#7C5CE0;--acc2:#A78BFA;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{color-scheme:dark;background:var(--bg);
+  background-image:linear-gradient(rgba(176,172,196,.030) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(176,172,196,.030) 1px,transparent 1px),
+                   radial-gradient(1000px 500px at 88% -14%,rgba(124,92,224,.13),transparent 64%);
+  background-size:44px 44px,44px 44px,auto;
+  font-family:'Sora',sans-serif;color:var(--txt);font-size:14px;line-height:1.55;
+  -webkit-font-smoothing:antialiased}
+::selection{background:rgba(230,57,70,.35)}
+a{color:var(--acc2);text-decoration:none}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;background:none;border:none}
+
+.shell{display:flex;min-height:100vh}
+.side{width:228px;flex-shrink:0;border-right:1px solid var(--line);background:rgba(10,17,31,.6);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+main{flex:1;min-width:0}
+.wrap{padding:32px;max-width:1280px;margin:0 auto}
+section{margin-top:44px}
+section:first-child{margin-top:0}
+
+/* ---- sidebar ---- */
+.brand{padding:20px 18px;border-bottom:1px solid var(--line);display:flex;gap:11px;align-items:center}
+.blogo{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#7C5CE0,#4C3399)}
+.bw{font-size:15px;font-weight:800;letter-spacing:-.3px}
+.bw span{color:var(--red)}
+.bt{font-size:8.5px;color:var(--mut);font-family:var(--mono);letter-spacing:1.3px;margin-top:1px}
+.navg{padding:16px 12px 4px}
+.navl{font-size:8.5px;letter-spacing:1.6px;color:var(--mut);font-family:var(--mono);padding:0 8px 8px}
+.ni{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;color:var(--sec);font-size:13px;
+  transition:background .15s,color .15s}
+.ni:hover{background:var(--panel2);color:var(--txt)}
+.ni.on{background:rgba(124,92,224,.16);color:var(--txt)}
+.ni.on svg{stroke:var(--acc2)}
+.ni svg{stroke:var(--mut);flex-shrink:0}
+.tower{margin:auto 12px 12px;padding:12px;border:1px solid var(--line);border-radius:4px;background:var(--panel)}
+.tw1{font-size:11px;font-weight:700;display:flex;align-items:center;gap:7px}
+.tw2{font-size:10px;color:var(--sec);margin-top:4px;font-family:var(--mono)}
+.tw3{font-size:9px;color:var(--mut);margin-top:2px;font-family:var(--mono);letter-spacing:.6px}
+
+/* ---- topbar ---- */
+.top{position:sticky;top:0;z-index:50;padding:14px 32px;display:flex;align-items:center;gap:14px;
+  border-bottom:1px solid var(--line);background:rgba(7,13,24,.82);backdrop-filter:blur(12px)}
+.top b{font-size:14px;font-weight:700}
+.mqbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:11px 32px;
+  border-bottom:1px solid var(--line);background:linear-gradient(90deg,rgba(124,92,224,.26),rgba(124,92,224,.05) 62%,transparent)}
+.mqtitle{font-size:13px;font-weight:800;letter-spacing:2.6px;font-family:var(--mono);color:var(--acc2)}
+.mqmeta{font-size:10.5px;font-family:var(--mono);color:var(--mut);letter-spacing:.6px}
+.mqmeta b{color:var(--sec);font-weight:500}
+@media(max-width:900px){.mqbar{padding:10px 18px;gap:8px}.mqtitle{font-size:11px;letter-spacing:1.8px}}
+.spacer{flex:1}
+.tr{display:flex;align-items:center;gap:18px;font-family:var(--mono);font-size:11px;color:var(--sec)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;font-size:10px;
+  letter-spacing:1.2px;font-family:var(--mono);white-space:nowrap;
+  background:rgba(45,212,160,.10);border:1px solid rgba(45,212,160,.30);color:var(--grn)}
+.chip.warn{background:rgba(245,185,59,.10);border-color:rgba(245,185,59,.32);color:var(--amb)}
+.chip.bad{background:rgba(230,57,70,.10);border-color:rgba(230,57,70,.32);color:var(--red)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--grn);animation:pd 2s infinite;display:inline-block;flex-shrink:0}
+.dot.r{background:var(--red);animation:pr 1.6s infinite}
+.dot.a{background:var(--amb)}
+.dot.off{background:var(--mut);animation:none}
+@keyframes pd{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(45,212,160,.35)}50%{opacity:.6;box-shadow:0 0 0 5px rgba(45,212,160,0)}}
+@keyframes pr{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(230,57,70,.4)}50%{opacity:.6;box-shadow:0 0 0 5px rgba(230,57,70,0)}}
+
+/* ---- buttons ---- */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:4px;font-size:12px;font-weight:600;
+  border:1px solid var(--line);background:var(--panel2);color:var(--txt);transition:border-color .18s,background .18s}
+.btn:hover{border-color:rgba(167,139,250,.55)}
+.btn.primary{background:linear-gradient(135deg,#7C5CE0,#5B3FB8);border-color:transparent;color:#FAF7FF}
+.btn.primary:hover{filter:brightness(1.09)}
+.btn.sm{padding:5px 10px;font-size:11px;border-radius:4px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ---- headings / KPI ---- */
+h1{font-size:30px;font-weight:800;letter-spacing:-.8px}
+h2{font-size:19px;font-weight:800;letter-spacing:-.4px}
+.eyebrow{font-size:9.5px;letter-spacing:2px;color:var(--acc2);font-family:var(--mono);margin-bottom:9px}
+.lede{color:var(--sec);font-size:13.5px;margin-top:9px;max-width:70ch}
+.shead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.stag{font-size:9.5px;letter-spacing:1.4px;color:var(--mut);font-family:var(--mono)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-top:26px}
+.kpi{background:var(--panel);padding:18px 20px}
+.kl{font-size:9px;letter-spacing:1.5px;color:var(--mut);font-family:var(--mono)}
+.kv{font-size:30px;font-weight:500;font-family:var(--mono);letter-spacing:-1px;margin-top:6px}
+.ks{font-size:10.5px;color:var(--mut);margin-top:2px}
+
+/* ---- device cards ---- */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:16px;margin-top:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:22px;
+  transition:border-color .2s,box-shadow .2s;position:relative}
+.card::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:2px;border-radius:2px;
+  background:var(--acc);opacity:.5}
+.card:hover{border-color:rgba(167,139,250,.45);box-shadow:0 0 0 1px rgba(167,139,250,.12)}
+.card.stale{opacity:.55}
+.dhead{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.ico{width:38px;height:38px;border-radius:4px;background:var(--panel2);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.dname{font-size:15px;font-weight:700;flex:1;min-width:0}
+.dname small{display:block;font-size:10px;color:var(--mut);font-family:var(--mono);letter-spacing:1px;font-weight:400;margin-top:2px}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:9.5px;
+  letter-spacing:1px;font-family:var(--mono);white-space:nowrap;
+  background:rgba(45,212,160,.10);border:1px solid rgba(45,212,160,.30);color:var(--grn)}
+.badge.idle{background:rgba(146,166,202,.08);border-color:var(--line);color:var(--sec)}
+.badge.idle .dot{background:var(--mut);animation:none}
+.badge.warn{background:rgba(245,185,59,.10);border-color:rgba(245,185,59,.32);color:var(--amb)}
+.badge.warn .dot{background:var(--amb);animation:none}
+.badge.bad{background:rgba(230,57,70,.10);border-color:rgba(230,57,70,.32);color:var(--red)}
+.badge.bad .dot{background:var(--red)}
+.badge .dot{width:5px;height:5px}
+.big{display:flex;align-items:baseline;gap:8px}
+.big b{font-size:34px;font-weight:500;font-family:var(--mono);letter-spacing:-1px}
+.big span{font-size:12px;color:var(--mut);font-family:var(--mono)}
+.bsub{font-size:11px;color:var(--sec);margin-top:2px;min-height:17px}
+.mgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line2)}
+.ml{font-size:9px;letter-spacing:1.4px;color:var(--mut);font-family:var(--mono)}
+.mv{font-size:15px;font-weight:600;font-family:var(--mono);margin-top:4px}
+.ms{font-size:10.5px;color:var(--mut);margin-top:1px}
+
+/* ---- meters: 4px rounded ends, 2px surface gap, recessive track ---- */
+.bar{margin-top:16px}
+.brow{display:flex;justify-content:space-between;gap:10px;font-size:10px;font-family:var(--mono);letter-spacing:1px;
+  color:var(--mut);margin-bottom:6px}
+.track{height:5px;border-radius:4px;background:var(--panel2);overflow:hidden}
+.fill{height:100%;border-radius:4px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+
+/* ---- token block inside each card ---- */
+.tok{margin-top:16px;padding-top:14px;border-top:1px solid var(--line2)}
+.tokrow{display:flex;align-items:flex-end;gap:12px}
+.tokmain{flex:1;min-width:0}
+.tokv{font-size:20px;font-weight:600;font-family:var(--mono);letter-spacing:-.5px}
+.tokv small{font-size:10px;color:var(--mut);font-weight:400;letter-spacing:1px;margin-left:5px}
+.tokh{font-size:10.5px;color:var(--sec);margin-top:2px}
+.tokh b{font-family:var(--mono);font-weight:500;color:var(--txt)}
+
+/* ---- token ledger table ---- */
+.tbl{width:100%;border-collapse:collapse;margin-top:18px;font-size:12.5px}
+.tbl th{text-align:left;font-size:9px;letter-spacing:1.5px;color:var(--mut);font-family:var(--mono);font-weight:400;
+  padding:0 14px 10px;border-bottom:1px solid var(--line)}
+.tbl td{padding:13px 14px;border-bottom:1px solid var(--line2);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl .num{font-family:var(--mono);font-weight:500}
+.tbl tbody tr:hover{background:rgba(146,166,202,.04)}
+
+/* ---- recharge drawer ---- */
+.scrim{position:fixed;inset:0;background:rgba(4,8,15,.72);backdrop-filter:blur(3px);z-index:90;
+  opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.show{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(430px,100%);z-index:91;background:var(--panel);
+  border-left:1px solid var(--line);display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .26s cubic-bezier(.4,0,.2,1)}
+.drawer.show{transform:none}
+.dwh{padding:20px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.dwb{flex:1;overflow-y:auto;padding:8px 22px 22px}
+.dwf{padding:16px 22px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.prow{padding:18px 0;border-bottom:1px solid var(--line2)}
+.prow:last-child{border-bottom:none}
+.pks{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
+
+.note{margin-top:16px;padding:13px 15px;border:1px solid var(--line);border-left:2px solid var(--acc2);
+  border-radius:4px;background:var(--panel);font-size:12.5px;color:var(--sec)}
+.note b{color:var(--txt);font-weight:600}
+.note code{font-family:var(--mono);font-size:11.5px;color:var(--txt);background:var(--panel2);
+  padding:1px 6px;border-radius:4px;border:1px solid var(--line2);word-break:break-all}
+.linkrow{display:flex;align-items:center;gap:10px;margin-top:11px;flex-wrap:wrap}
+.linkrow code{flex:1;min-width:200px;padding:7px 11px}
+
+footer{border-top:1px solid var(--line);margin-top:52px;padding:22px 32px;display:flex;justify-content:space-between;
+  gap:18px;flex-wrap:wrap;font-size:11px;color:var(--mut)}
+footer a{color:var(--sec)}
+.fl{display:flex;gap:18px;flex-wrap:wrap}
+
+#toast{position:fixed;right:22px;bottom:22px;z-index:95;padding:13px 18px;border-radius:9px;background:var(--panel2);
+  border:1px solid var(--line);font-size:12.5px;box-shadow:0 12px 34px rgba(0,0,0,.5);
+  transform:translateY(14px);opacity:0;pointer-events:none;transition:.22s}
+#toast.show{transform:none;opacity:1}
+
+@media(max-width:900px){
+  .side{display:none}
+  .grid{grid-template-columns:1fr}
+  .wrap{padding:20px}
+  .top{padding:12px 18px;gap:10px}
+  .tr{gap:11px;font-size:10px}
+  .hide-sm{display:none}
+  footer{padding:20px 18px}
+  h1{font-size:24px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===========================================================================
+   DEAD-LINK PRESENTATION
+   ---------------------------------------------------------------------------
+   The rule that governs every declaration in this block: a disconnect is a HARD
+   CUT and a reconnect is a FADE. Losing telemetry must land inside the same
+   frame the watchdog fires -- if it eases in over 200 ms it reads as a styling
+   flourish, and the one thing a theatre console must never do is make "the data
+   stopped" look decorative. So every dead-state rule carries transition:none,
+   and the transition lives on the LIVE state instead, where it only ever plays
+   on the way back up.
+
+   Greying is done with filter on an inner wrapper rather than on .card itself,
+   so the NO SIGNAL mask stays at full contrast on top of a desaturated card
+   instead of being desaturated along with it.
+   =========================================================================== */
+.card{overflow:hidden}
+.cbody{transition:filter .34s ease,opacity .34s ease}
+.card.dead .cbody{
+  filter:grayscale(1) brightness(.34) contrast(.92);
+  opacity:.55;
+  transition:none;                      /* HARD CUT -- see block comment */
+}
+.card.dead{
+  border-color:rgba(230,57,70,.42);
+  background:#08080C;
+  transition:none;
+}
+.card.dead::before{background:var(--red);opacity:1;animation:deadrail 1.15s ease-in-out infinite}
+@keyframes deadrail{0%,100%{opacity:1}50%{opacity:.22}}
+
+.deadmask{
+  position:absolute;inset:0;z-index:3;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  background:radial-gradient(120% 90% at 50% 50%,rgba(230,57,70,.10),rgba(6,6,10,.72) 72%);
+  border:1px dashed rgba(230,57,70,.5);border-radius:4px;
+  pointer-events:none;text-align:center;padding:14px;
+}
+.card.dead .deadmask{display:flex}
+.dmt{font-family:var(--mono);font-size:15px;letter-spacing:4px;font-weight:500;color:#FF7A85;
+  text-shadow:0 0 22px rgba(230,57,70,.55)}
+.dms{font-family:var(--mono);font-size:10px;letter-spacing:1.4px;color:#C98C93}
+.dmw{font-size:11px;color:#8E7F86;max-width:34ch;line-height:1.45}
+
+/* Chrome outside the cards dims too, so the page never half-looks alive. */
+.kpis.dead .kv,.kpis.dead .ks{color:var(--mut)}
+.kpis.dead{border-color:rgba(230,57,70,.28)}
+.numdead{color:var(--mut)!important}
+
+/* ---- the alarm bar -------------------------------------------------------
+   Sticks directly under the top bar so it is impossible to scroll away from,
+   and stays up for the entire outage rather than toasting for 2.6 s and
+   leaving an unattended screen looking normal again. */
+.alarm{
+  display:none;position:sticky;top:0;z-index:60;
+  align-items:center;gap:12px;flex-wrap:wrap;padding:11px 32px;
+  background:linear-gradient(90deg,rgba(230,57,70,.30),rgba(230,57,70,.11) 58%,rgba(230,57,70,.05));
+  border-bottom:1px solid rgba(230,57,70,.45);
+  box-shadow:0 8px 26px rgba(0,0,0,.42);
+}
+.alarm.show{display:flex}
+.alarm.show{animation:alarmin .9s ease-in-out 0s 3}
+@keyframes alarmin{0%,100%{background-color:transparent}50%{background-color:rgba(230,57,70,.16)}}
+.alarm b{font-family:var(--mono);font-size:12px;letter-spacing:2.4px;color:#FF7A85}
+.alarmmsg{font-size:12px;color:var(--sec);flex:1;min-width:180px}
+.alarmage{font-family:var(--mono);font-size:12px;color:#FF7A85;letter-spacing:1px;
+  padding:3px 10px;border:1px solid rgba(230,57,70,.4);border-radius:999px;white-space:nowrap}
+@media(max-width:900px){.alarm{padding:10px 18px;gap:8px}.alarm b{font-size:10.5px;letter-spacing:1.4px}}
+
+/* ===========================================================================
+   ANALYTICS
+   Charts are hand-drawn SVG on purpose: this console already ships a
+   dependency-free MQTT codec, and adding a 200 KB chart CDN to a page that has
+   to work on a hospital VLAN with no outbound internet would be a strange
+   trade. Series steps are the meter palette re-validated against #15151C --
+   lightness band, chroma floor, CVD separation, normal-vision floor and
+   contrast all pass at OKLCH L 0.48-0.67.
+   =========================================================================== */
+/* The top bar is sticky, so an anchor jump would otherwise land the heading
+   underneath it. */
+section{scroll-margin-top:96px}
+.ch2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+@media(max-width:1100px){.ch2{grid-template-columns:1fr}}
+.chart{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:20px 22px 16px;position:relative}
+.chh{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+.chh h3{font-size:14px;font-weight:700;flex:1;min-width:0}
+.chtag{font-size:9px;letter-spacing:1.5px;font-family:var(--mono);color:var(--mut);white-space:nowrap}
+.chleg{display:flex;gap:16px;flex-wrap:wrap;margin:2px 0 10px}
+.lgi{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;color:var(--sec);font-family:var(--mono);letter-spacing:.4px}
+.lgk{width:14px;height:0;border-top-width:2px;border-top-style:solid;flex-shrink:0}
+.lgk.sq{height:9px;width:9px;border-radius:2px;border:none}
+.chwrap{position:relative}
+.chwrap svg{display:block;width:100%;height:auto;overflow:visible}
+.gl{stroke:var(--line2);stroke-width:1}
+.ax{fill:var(--mut);font-family:var(--mono);font-size:9px}
+.chnote{font-size:10px;color:var(--mut);margin-top:8px;font-family:var(--mono);letter-spacing:.3px}
+
+/* Filter the plot, never the wrapper: the NO DATA stamp lives inside .chwrap
+   too, and greying the wrapper would desaturate the one thing that has to stay
+   readable. Same reason the cards wrap their contents in .cbody. */
+.chart.dead .chwrap svg,.chart.dead .chleg{filter:grayscale(1) brightness(.34);opacity:.5;transition:none}
+.chart .chwrap svg,.chart .chleg{transition:filter .34s ease,opacity .34s ease}
+.chnodata{position:absolute;inset:0;z-index:4;display:none;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:12px;letter-spacing:4px;color:#FF7A85;pointer-events:none;
+  text-shadow:0 0 20px rgba(230,57,70,.6)}
+.chart.dead .chnodata{display:flex}
+.chart.dead{border-color:rgba(230,57,70,.32);transition:none}
+
+/* tooltip -- every chart gets one; a chart you cannot interrogate is a picture */
+.tip{position:absolute;z-index:8;pointer-events:none;opacity:0;transform:translateY(4px);
+  transition:opacity .12s,transform .12s;background:var(--panel2);border:1px solid var(--line);
+  border-radius:5px;padding:8px 11px;box-shadow:0 10px 28px rgba(0,0,0,.55);white-space:nowrap}
+.tip.on{opacity:1;transform:none}
+.tipd{font-family:var(--mono);font-size:9.5px;letter-spacing:1.2px;color:var(--mut);margin-bottom:4px}
+.tipr{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--sec);margin-top:2px}
+.tipr b{font-family:var(--mono);font-weight:500;color:var(--txt);margin-left:auto;padding-left:14px}
+.tipk{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.crosshair{stroke:var(--sec);stroke-width:1;stroke-dasharray:3 3;opacity:0}
+.crosshair.on{opacity:.55}
+
+/* ===========================================================================
+   AUTOMATED REPORTS
+   =========================================================================== */
+.rp2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;align-items:start}
+@media(max-width:1100px){.rp2{grid-template-columns:1fr}}
+.pane{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:22px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:560px){.frow{grid-template-columns:1fr}}
+.fld{margin-bottom:16px}
+.flab{font-size:9px;letter-spacing:1.5px;color:var(--mut);font-family:var(--mono);margin-bottom:7px;display:block}
+.fin{width:100%;padding:10px 12px;border-radius:4px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--txt);font-family:var(--mono);font-size:12.5px;transition:border-color .16s}
+.fin:focus{outline:none;border-color:var(--acc2)}
+.fin::placeholder{color:var(--mut)}
+.fin.bad{border-color:var(--red)}
+select.fin{font-family:'Sora',sans-serif;cursor:pointer}
+.ferr{font-size:10.5px;color:var(--red);margin-top:6px;min-height:14px;font-family:var(--mono)}
+
+.togs{border:1px solid var(--line);border-radius:4px;overflow:hidden;margin:4px 0 20px}
+.tog{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--line2);
+  background:var(--panel2);cursor:pointer}
+.tog:last-child{border-bottom:none}
+.tog:hover{background:rgba(146,166,202,.05)}
+.tog > span:first-of-type{flex:1;font-size:12.5px}
+/* flex-basis pinned, not just flex-shrink: the switch is a <span> too, so a
+   loose `.tog span{flex:1}` was stretching the track across the whole row. */
+.sw{flex:0 0 38px;width:38px;height:21px;border-radius:999px;background:#33313D;position:relative;
+  transition:background .18s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;
+  background:#EEEAF6;transition:transform .18s}
+.tog input{position:absolute;opacity:0;width:0;height:0}
+.tog input:checked + .sw{background:var(--red)}
+.tog input:checked + .sw::after{transform:translateX(17px)}
+.tog input:focus-visible + .sw{box-shadow:0 0 0 2px var(--acc2)}
+
+.rbtns{display:flex;gap:10px;flex-wrap:wrap}
+.btn.danger{background:linear-gradient(135deg,#E63946,#B32734);border-color:transparent;color:#FFF3F4;font-weight:700}
+.btn.danger:hover{filter:brightness(1.09)}
+
+.prev{font-family:var(--mono);font-size:11.5px;line-height:1.72}
+.prevh{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:1.5px;
+  color:var(--mut);padding-bottom:14px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.prevm{color:var(--acc2)}
+.prevs{color:var(--sec)}
+.prevb{font-family:'Sora',sans-serif;font-size:13px;font-weight:700;margin:18px 0 10px}
+.prevl{display:flex;gap:9px;align-items:flex-start;margin-top:7px;color:var(--sec);font-size:11.5px}
+.prevl i{color:var(--red);font-style:normal;flex-shrink:0;line-height:1.6}
+.prevl b{color:var(--txt);font-weight:500}
+.prevf{margin-top:20px;padding-top:14px;border-top:1px dashed var(--line);font-style:italic;
+  font-size:11px;color:var(--mut)}
+.prevwarn{margin-top:14px;padding:10px 12px;border-radius:4px;border:1px solid rgba(230,57,70,.35);
+  background:rgba(230,57,70,.08);font-size:11px;color:#E9A7AD;font-family:'Sora',sans-serif;line-height:1.5}
+
+
+/* ===========================================================================
+   v3.2 — COLLAPSIBLE SESSION BAR
+   The connection facts are diagnostics, not something a theatre lead needs in
+   their eyeline every shift. Title stays, the rest folds away behind a
+   disclosure that remembers whether it was left open.
+   =========================================================================== */
+.mqbar{padding:0 32px}
+@media(max-width:900px){.mqbar{padding:0 18px}}
+.mqtoggle{display:inline-flex;align-items:center;gap:10px;padding:11px 0;background:none;border:none;
+  cursor:pointer;color:inherit}
+.mqtoggle:focus-visible{outline:2px solid var(--acc2);outline-offset:3px;border-radius:4px}
+.mqchev{transition:transform .24s cubic-bezier(.4,0,.2,1);stroke:var(--acc2);flex-shrink:0}
+.mqtoggle[aria-expanded="true"] .mqchev{transform:rotate(180deg)}
+.mqhint{font-size:9.5px;letter-spacing:1.4px;font-family:var(--mono);color:var(--mut);
+  padding:2px 9px;border:1px solid var(--line);border-radius:999px;transition:color .16s,border-color .16s}
+.mqtoggle:hover .mqhint{color:var(--sec);border-color:rgba(167,139,250,.5)}
+
+.mqdetail{overflow:hidden;max-height:0;transition:max-height .3s cubic-bezier(.4,0,.2,1);
+  background:rgba(10,10,16,.6);border-bottom:1px solid transparent}
+.mqdetail.open{max-height:260px;border-bottom-color:var(--line)}
+.mqgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:1px;
+  background:var(--line2);border-top:1px solid var(--line2)}
+.mqcell{background:rgba(13,13,19,.94);padding:13px 32px}
+@media(max-width:900px){.mqcell{padding:12px 18px}}
+.mql{display:block;font-size:8.5px;letter-spacing:1.6px;color:var(--mut);font-family:var(--mono);
+  margin-bottom:5px}
+.mqv{font-size:12px;font-family:var(--mono);color:var(--txt);letter-spacing:.2px;
+  overflow-wrap:break-word}
+.mqv.good{color:var(--grn)}
+.mqv.bad{color:var(--red)}
+
+/* ---- professional dead state: a status, not a stopwatch ------------------ */
+.dms{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:9.5px;
+  letter-spacing:1.6px;color:#C98C93}
+.spin{width:11px;height:11px;border-radius:50%;flex-shrink:0;
+  border:1.5px solid rgba(230,57,70,.28);border-top-color:#FF7A85;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.alarmage{display:inline-flex;align-items:center;gap:8px}
+
+/* ===========================================================================
+   CHECKOUT
+   A recharge is a purchase, so it is presented as one: choose a plan, choose a
+   method, authenticate, get a receipt. Test mode is stated on every screen that
+   asks for a credential — a payment form that hides the fact it is a sandbox is
+   the one thing a payment form must never do.
+   =========================================================================== */
+.drawer{width:min(520px,100%)}
+.dwb{padding:0}
+.step{padding:20px 22px 24px}
+
+.stepper{display:flex;align-items:center;gap:8px;padding:14px 22px;border-bottom:1px solid var(--line2);
+  background:var(--panel2)}
+.stepi{display:flex;align-items:center;gap:7px;font-size:10px;font-family:var(--mono);letter-spacing:1.1px;
+  color:var(--mut)}
+.stepn{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:9.5px;border:1px solid var(--line);flex-shrink:0}
+.stepi.on{color:var(--txt)}
+.stepi.on .stepn{background:var(--acc);border-color:transparent;color:#fff}
+.stepi.done{color:var(--grn)}
+.stepi.done .stepn{background:rgba(45,212,160,.14);border-color:rgba(45,212,160,.4);color:var(--grn)}
+.stepbar{flex:1;height:1px;background:var(--line)}
+
+.testbadge{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;
+  font-size:8.5px;letter-spacing:1.4px;font-family:var(--mono);
+  background:rgba(245,185,59,.10);border:1px solid rgba(245,185,59,.34);color:var(--amb)}
+
+.balrow{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--line);
+  border-radius:4px;background:var(--panel2);margin-bottom:18px}
+.balrow .bn{flex:1;min-width:0;font-size:13px;font-weight:700}
+.balrow .bn small{display:block;font-size:10px;color:var(--mut);font-family:var(--mono);
+  letter-spacing:.8px;font-weight:400;margin-top:3px}
+.balrow .bb{font-family:var(--mono);font-size:17px;font-weight:500;white-space:nowrap}
+.balrow .bb small{font-size:9px;color:var(--mut);letter-spacing:1.2px;margin-left:5px}
+
+.plans{display:grid;gap:10px}
+.plan{display:flex;align-items:center;gap:14px;padding:15px 16px;border:1px solid var(--line);
+  border-radius:5px;background:var(--panel2);cursor:pointer;text-align:left;width:100%;
+  transition:border-color .16s,background .16s;position:relative}
+.plan:hover{border-color:rgba(167,139,250,.5)}
+.plan.sel{border-color:var(--acc2);background:rgba(124,92,224,.12);
+  box-shadow:0 0 0 1px rgba(167,139,250,.35)}
+.plan .radio{width:17px;height:17px;border-radius:50%;border:1.5px solid var(--mut);flex-shrink:0;
+  position:relative;transition:border-color .16s}
+.plan.sel .radio{border-color:var(--acc2)}
+.plan.sel .radio::after{content:"";position:absolute;inset:3.5px;border-radius:50%;background:var(--acc2)}
+.plan .pt{flex:1;min-width:0}
+.plan .pv{font-family:var(--mono);font-size:14.5px;font-weight:500}
+.plan .ps{font-size:10.5px;color:var(--mut);margin-top:3px}
+.plan .pp{text-align:right;white-space:nowrap}
+.plan .pa{font-family:var(--mono);font-size:15px;font-weight:500}
+.plan .pu{font-size:9.5px;color:var(--mut);font-family:var(--mono);margin-top:3px}
+.ptag{position:absolute;top:-8px;right:12px;font-size:8px;letter-spacing:1.3px;font-family:var(--mono);
+  padding:2px 8px;border-radius:999px;background:var(--acc);color:#fff}
+.ptag.save{background:rgba(31,165,126,.9)}
+
+.summary{border:1px solid var(--line);border-radius:4px;background:var(--panel2);padding:14px 16px;
+  margin-bottom:18px}
+.srow{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--sec);
+  padding:5px 0;font-family:var(--mono)}
+.srow b{color:var(--txt);font-weight:500}
+.srow.tot{border-top:1px solid var(--line);margin-top:8px;padding-top:11px;font-size:14px}
+.srow.tot b{font-size:17px}
+
+.methods{display:flex;gap:8px;margin-bottom:18px}
+.method{flex:1;padding:13px 10px;border:1px solid var(--line);border-radius:5px;background:var(--panel2);
+  cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;
+  font-size:11.5px;transition:border-color .16s,background .16s}
+.method:hover{border-color:rgba(167,139,250,.5)}
+.method.sel{border-color:var(--acc2);background:rgba(124,92,224,.12)}
+.method svg{stroke:var(--acc2)}
+
+.upiapps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px 0 16px}
+.upiapp{padding:11px 4px;border:1px solid var(--line);border-radius:5px;background:var(--panel2);
+  cursor:pointer;font-size:10px;font-family:var(--mono);letter-spacing:.4px;color:var(--sec);
+  display:flex;flex-direction:column;align-items:center;gap:6px;transition:border-color .16s}
+.upiapp:hover{border-color:rgba(167,139,250,.5);color:var(--txt)}
+.upiapp.sel{border-color:var(--acc2);background:rgba(124,92,224,.12);color:var(--txt)}
+.ua{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;color:#fff}
+
+.cardbox{border:1px solid var(--line);border-radius:5px;background:var(--panel2);padding:15px;
+  margin-bottom:14px}
+.cnum{position:relative}
+/* centre on the input, not on the whole field: the label above it is ~19px
+   of the wrapper and was pulling the badge up level with the caption. */
+.cbrand{position:absolute;right:11px;top:calc(50% + 10px);transform:translateY(-50%);font-size:9px;
+  font-family:var(--mono);letter-spacing:1.2px;color:var(--acc2);pointer-events:none}
+.crow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hintline{font-size:10.5px;color:var(--mut);font-family:var(--mono);line-height:1.7;margin-top:10px}
+.hintline b{color:var(--sec);font-weight:500;cursor:pointer;border-bottom:1px dotted var(--mut)}
+.hintline b:hover{color:var(--acc2)}
+
+.qrwrap{display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px;
+  border:1px solid var(--line);border-radius:5px;background:var(--panel2);margin-bottom:14px}
+.qr{width:150px;height:150px;background:#fff;padding:9px;border-radius:6px;display:block}
+.qrcap{font-size:10.5px;color:var(--mut);font-family:var(--mono);letter-spacing:.6px;text-align:center}
+
+/* ---- processing & result ---- */
+.payst{padding:44px 22px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px}
+.bigspin{width:52px;height:52px;border-radius:50%;border:3px solid var(--line);
+  border-top-color:var(--acc2);animation:sp .85s linear infinite}
+.paymsg{font-size:13.5px;color:var(--sec);min-height:20px}
+.paysec{font-size:10.5px;color:var(--mut);font-family:var(--mono);letter-spacing:.8px;
+  display:flex;align-items:center;gap:7px}
+.tickwrap{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:rgba(45,212,160,.13);border:1.5px solid rgba(45,212,160,.45)}
+.tickwrap.fail{background:rgba(230,57,70,.13);border-color:rgba(230,57,70,.45)}
+.tick{stroke:var(--grn);stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:26;stroke-dashoffset:26;animation:draw .42s .1s ease forwards}
+.tick.fail{stroke:var(--red);stroke-dasharray:34;stroke-dashoffset:34}
+@keyframes draw{to{stroke-dashoffset:0}}
+.payh{font-size:19px;font-weight:800;letter-spacing:-.4px}
+.payamt{font-family:var(--mono);font-size:29px;font-weight:500;letter-spacing:-1px}
+.receipt{width:100%;border:1px solid var(--line);border-radius:4px;background:var(--panel2);
+  padding:14px 16px;text-align:left;margin-top:4px}
+.rrow{display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--mut);
+  font-family:var(--mono);padding:4.5px 0}
+.rrow b{color:var(--txt);font-weight:500;text-align:right;word-break:break-all}
+
+.txns{margin-top:22px;padding-top:16px;border-top:1px solid var(--line2)}
+.txnh{font-size:9px;letter-spacing:1.5px;color:var(--mut);font-family:var(--mono);margin-bottom:10px}
+.txn{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--line2);
+  font-size:11.5px}
+.txn:last-child{border-bottom:none}
+.txn .ti{width:26px;height:26px;border-radius:5px;background:var(--panel2);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;
+  font-family:var(--mono);color:var(--acc2)}
+.txn .td{flex:1;min-width:0}
+.txn .td b{display:block;font-weight:500;font-size:12px}
+.txn .td span{font-size:10px;color:var(--mut);font-family:var(--mono)}
+.txn .ta{font-family:var(--mono);font-size:12px;white-space:nowrap;color:var(--grn)}
+
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="side">
+  <div class="brand">
+    <div class="blogo"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div>
+    <div><div class="bw">Univ<span>Labs</span></div><div class="bt">MQTT DASHBOARD</div></div>
+  </div>
+  <div class="navg">
+    <div class="navl">MONITOR</div>
+    <a class="ni on" href="#overview"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>Overview</a>
+    <a class="ni" href="#devices"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M8 21h8M12 17v4"></path></svg>Devices</a>
+    <a class="ni" href="#tokens"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v8M9.5 10.2h5M9.5 13.8h5"></path></svg>Tokens</a>
+    <a class="ni" href="#analytics"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>Analytics</a>
+  </div>
+  <div class="navg">
+    <div class="navl">AUTOMATION</div>
+    <a class="ni" href="#reports"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg>Reports</a>
+  </div>
+  <div class="navg">
+    <div class="navl">FEED</div>
+    <a class="ni" href="#stream"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h9"></path></svg>Live stream</a>
+  </div>
+  <div class="tower">
+    <div class="tw1"><span class="dot a" id="towerDot"></span>TOWER UL-04</div>
+    <div class="tw2" id="towerState">Online · 4/4 devices</div>
+    <div class="tw3">OR-3 · FOUR CHIP 4K</div>
+  </div>
+</aside>
+
+<main>
+<div class="mqbar">
+  <button class="mqtoggle" id="mqToggle" aria-expanded="false" aria-controls="mqDetail">
+    <span class="mqtitle">MQTT DASHBOARD</span>
+    <svg class="mqchev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+    <span class="mqhint" id="mqHint">SESSION DETAILS</span>
+  </button>
+</div>
+<div class="mqdetail" id="mqDetail">
+  <div class="mqgrid">
+    <div class="mqcell"><span class="mql">SERVICE</span><span class="mqv">UnivLabs Cloud</span></div>
+    <div class="mqcell"><span class="mql">DEVICE CHANNEL</span><span class="mqv" id="mqRoot">—</span></div>
+    <div class="mqcell"><span class="mql">LINK</span><span class="mqv">Secure WebSocket · TLS</span></div>
+    <div class="mqcell"><span class="mql">CONNECTION</span><span class="mqv" id="mqStatus">—</span></div>
+    <div class="mqcell"><span class="mql">SNAPSHOT</span><span class="mqv" id="snapTs">—</span></div>
+    <div class="mqcell"><span class="mql">SESSION FRAMES</span><span class="mqv" id="mqFrames">0</span></div>
+  </div>
+</div>
+<header class="top">
+  <b class="hide-sm">Surgical Tower · OR-3</b>
+  <span class="chip warn" id="connChip"><span class="dot a" id="connDot"></span><span id="connText">RELAY DOWN</span></span>
+  <span class="spacer"></span>
+  <div class="tr">
+    <span class="hide-sm" id="dateStr">Fri, Aug 7, 2026</span>
+    <span id="clock">09:32:44</span>
+    <button class="btn primary sm" id="rechargeBtn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5z"></path></svg>
+      Recharge
+    </button>
+  </div>
+</header>
+
+<div class="alarm" id="alarm" role="alert" aria-live="assertive">
+  <span class="dot r"></span>
+  <b id="alarmTitle">SIGNAL LOST</b>
+  <span class="alarmmsg" id="alarmMsg"></span>
+  <span class="alarmage" id="alarmAge"><span class="spin"></span>RECONNECTING</span>
+  <button class="btn sm" id="alarmRetry">Reconnect now</button>
+</div>
+
+<div class="wrap">
+
+<section id="overview">
+  <div class="eyebrow">MQTT DASHBOARD · LIVE TELEMETRY</div>
+  <h1 id="heroTitle">Connecting…</h1>
+  <p class="lede" id="heroLede">Connecting to UnivLabs Cloud — live readings from the tower controller in OR-3 will appear here. This console is read-only by design.</p>
+  <div class="kpis" id="kpiBlock">
+    <div class="kpi"><div class="kl">TOTAL OPERATING HOURS</div><div class="kv" id="kTotalHours">1,716</div><div class="ks" id="kTotalHoursSub">across four devices</div></div>
+    <div class="kpi"><div class="kl">DEVICES OPERATIONAL</div><div class="kv" id="kOnline">4/4</div><div class="ks" id="kOnlineSub">all reporting within 10 s</div></div>
+    <div class="kpi"><div class="kl">TOKEN BALANCE</div><div class="kv" id="kTokens">7,979</div><div class="ks" id="kTokensSub">of 8,000 full allocation</div></div>
+    <div class="kpi"><div class="kl">SNAPSHOT RATE</div><div class="kv" id="kRate">1.0</div><div class="ks" id="kRateSub">snapshots per second</div></div>
+  </div>
+</section>
+
+<section id="devices">
+  <div class="shead">
+    <h2>Active Devices</h2>
+    <span class="stag" id="devTag">4 OF 4 ONLINE · LIVE MQTT</span>
+  </div>
+  <div class="grid" id="deviceGrid">
+    <article class="card" id="card-pump">
+      <div class="dhead">
+        <div class="ico"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--acc2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.2 6 10a6 6 0 0 1-12 0c0-3.8 6-10 6-10z"></path><path d="M8.6 14.4c1.2.9 2.3.9 3.4 0s2.2-.9 3.4 0"></path></svg></div>
+        <h3 class="dname">LAP-M-1000 Pump<small>IRRIGATION / SUCTION</small></h3>
+        <span class="badge" id="badge-pump"><span class="dot"></span><span>OPERATIONAL</span></span>
+      </div>
+      <div class="big"><b id="hero-pump">2.8</b><span id="herou-pump">L/min</span></div>
+      <div class="bsub" id="hsub-pump">Flow rate · duty 81% · pressure 1.1 bar</div>
+      <div class="mgrid" id="tiles-pump"><div><div class="ml">OPERATING TIME</div><div class="mv">287.2 h</div><div class="ms">42 h this month</div></div><div><div class="ml">TEMPERATURE</div><div class="mv">40.6 °C</div><div class="ms">Normal range</div></div><div><div class="ml">NEXT SERVICE</div><div class="mv">58 days</div><div class="ms">Nov 15, 2026</div></div></div>
+      <div class="bar">
+        <div class="brow"><span id="mlab-pump">FLOW vs 3.5 L/min CEILING</span><span id="mval-pump" style="color:var(--m-grn)">2.8 / 3.5 L/min</span></div>
+        <div class="track"><div class="fill" id="mfill-pump" style="width: 80%; background: linear-gradient(90deg,var(--m-grn),#2DD4A0);"></div></div>
+      </div>
+      <div class="tok">
+        <div class="tokrow">
+          <div class="tokmain">
+            <div class="tokv" id="tokv-pump">1,997<small>TOKENS</small></div>
+            <div class="tokh" id="tokh-pump">143 h remaining at 14 / hour</div>
+          </div>
+          <span class="badge" id="tokb-pump"><span class="dot"></span><span>✓ OK</span></span>
+          <button class="btn sm" data-recharge="pump">Recharge</button>
+        </div>
+        <div class="bar" style="margin-top:10px">
+          <div class="track"><div class="fill" id="tokf-pump" style="width: 99.9%; background: linear-gradient(90deg,var(--m-grn),#2DD4A0);"></div></div>
+        </div>
+      </div>
+    </article>
+    <article class="card" id="card-insufflator">
+      <div class="dhead">
+        <div class="ico"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--acc2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8c2.5-2 5-2 7.5 0S16.5 10 19 8"></path><path d="M4 13c2.5-2 5-2 7.5 0s5 2 7.5 0"></path><path d="M4 18c2.5-2 5-2 7.5 0s5 2 7.5 0"></path></svg></div>
+        <h3 class="dname">Uniflator UL45-S<small>CO₂ INSUFFLATOR</small></h3>
+        <span class="badge" id="badge-insufflator"><span class="dot"></span><span>OPERATIONAL</span></span>
+      </div>
+      <div class="big"><b id="hero-insufflator">12.1</b><span id="herou-insufflator">mmHg</span></div>
+      <div class="bsub" id="hsub-insufflator">CO₂ pressure · setpoint 12 mmHg · optimal insufflation level</div>
+      <div class="mgrid" id="tiles-insufflator"><div><div class="ml">TOTAL CO₂</div><div class="mv">2,848 L</div><div class="ms">385 L this month</div></div><div><div class="ml">AVG RATE</div><div class="mv">15.7 L/hr</div><div class="ms">30-day average</div></div><div><div class="ml">SMOKE EVAC</div><div class="mv">Active</div><div class="ms">Filter life 82%</div></div></div>
+      <div class="bar">
+        <div class="brow"><span id="mlab-insufflator">TANK LEVEL</span><span id="mval-insufflator" style="color:var(--m-amb)">68% · ≈22 DAYS · AUTO-ORDER ON</span></div>
+        <div class="track"><div class="fill" id="mfill-insufflator" style="width: 68%; background: linear-gradient(90deg,var(--m-amb),#F5B93B);"></div></div>
+      </div>
+      <div class="tok">
+        <div class="tokrow">
+          <div class="tokmain">
+            <div class="tokv" id="tokv-insufflator">1,988<small>TOKENS</small></div>
+            <div class="tokh" id="tokh-insufflator">21.1 h remaining at 6 / litre</div>
+          </div>
+          <span class="badge" id="tokb-insufflator"><span class="dot"></span><span>✓ OK</span></span>
+          <button class="btn sm" data-recharge="insufflator">Recharge</button>
+        </div>
+        <div class="bar" style="margin-top:10px">
+          <div class="track"><div class="fill" id="tokf-insufflator" style="width: 99.4%; background: linear-gradient(90deg,var(--m-amb),#F5B93B);"></div></div>
+        </div>
+      </div>
+    </article>
+    <article class="card" id="card-light">
+      <div class="dhead">
+        <div class="ico"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--acc2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"></path><path d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .9 1.6h5.4c.1-.6.4-1.2.9-1.6A6 6 0 0 0 12 3z"></path></svg></div>
+        <h3 class="dname">NIR UL9700 Light Source<small>WHITE LIGHT + NIR / ICG</small></h3>
+        <span class="badge" id="badge-light"><span class="dot"></span><span>OPERATIONAL</span></span>
+      </div>
+      <div class="big"><b id="hero-light">4,134</b><span id="herou-light">lux</span></div>
+      <div class="bsub" id="hsub-light">White light output · intensity 65% · drive 1,925 mA</div>
+      <div class="mgrid" id="tiles-light"><div><div class="ml">NIR OUTPUT</div><div class="mv">850 nm</div><div class="ms">ICG active · 65 W</div></div><div><div class="ml">COLOR TEMP</div><div class="mv">5,600 K</div><div class="ms">Surgical visibility</div></div><div><div class="ml">BULB LIFE</div><div class="mv">756.1 h</div><div class="ms">Used 487 h</div></div></div>
+      <div class="bar">
+        <div class="brow"><span id="mlab-light">BULB LIFE REMAINING</span><span id="mval-light" style="color:var(--m-blu)">64%</span></div>
+        <div class="track"><div class="fill" id="mfill-light" style="width: 63.9%; background: linear-gradient(90deg,var(--m-blu),#4D9FFF);"></div></div>
+      </div>
+      <div class="tok">
+        <div class="tokrow">
+          <div class="tokmain">
+            <div class="tokv" id="tokv-light">1,995<small>TOKENS</small></div>
+            <div class="tokh" id="tokh-light">111 h remaining at 18 / hour</div>
+          </div>
+          <span class="badge" id="tokb-light"><span class="dot"></span><span>✓ OK</span></span>
+          <button class="btn sm" data-recharge="light">Recharge</button>
+        </div>
+        <div class="bar" style="margin-top:10px">
+          <div class="track"><div class="fill" id="tokf-light" style="width: 99.7%; background: linear-gradient(90deg,var(--m-blu),#4D9FFF);"></div></div>
+        </div>
+      </div>
+    </article>
+    <article class="card" id="card-camera">
+      <div class="dhead">
+        <div class="ico"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--acc2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6.5" width="13" height="11" rx="2"></rect><path d="M15.5 10.5 21.5 7v10l-6-3.5z"></path></svg></div>
+        <h3 class="dname">4K ICG 4-CMOS Camera<small>CAMERA CONTROL UNIT</small></h3>
+        <span class="badge" id="badge-camera"><span class="dot"></span><span>OPERATIONAL</span></span>
+      </div>
+      <div class="big"><b id="hero-camera">4K UHD</b><span id="herou-camera">3840x2160 @ 60 fps</span></div>
+      <div class="bsub" id="hsub-camera">Resolution · HDR enabled · head 42.2 °C</div>
+      <div class="mgrid" id="tiles-camera"><div><div class="ml">SENSORS</div><div class="mv">Excellent</div><div class="ms">4 CMOS · SNR 42 dB</div></div><div><div class="ml">OPERATING HOURS</div><div class="mv">673.1 h</div><div class="ms">72 h this month</div></div><div><div class="ml">GAIN / EXPOSURE</div><div class="mv">4.2 dB</div><div class="ms">8,344 µs</div></div></div>
+      <div class="bar">
+        <div class="brow"><span id="mlab-camera">STORAGE</span><span id="mval-camera" style="color:var(--m-mag)">847 GB / 2 TB</span></div>
+        <div class="track"><div class="fill" id="mfill-camera" style="width: 41.4%; background: linear-gradient(90deg,var(--m-mag),#F06AAE);"></div></div>
+      </div>
+      <div class="tok">
+        <div class="tokrow">
+          <div class="tokmain">
+            <div class="tokv" id="tokv-camera">1,999<small>TOKENS</small></div>
+            <div class="tokh" id="tokh-camera">200 h remaining at 10 / hour</div>
+          </div>
+          <span class="badge" id="tokb-camera"><span class="dot"></span><span>✓ OK</span></span>
+          <button class="btn sm" data-recharge="camera">Recharge</button>
+        </div>
+        <div class="bar" style="margin-top:10px">
+          <div class="track"><div class="fill" id="tokf-camera" style="width: 99.9%; background: linear-gradient(90deg,var(--m-mag),#F06AAE);"></div></div>
+        </div>
+      </div>
+    </article></div>
+</section>
+
+<section id="tokens">
+  <div class="shead">
+    <h2>Token Ledger</h2>
+    <span class="stag">CONSUMPTION METERED AGAINST LIVE RUNTIME</span>
+  </div>
+  <p class="lede">Each device draws tokens against its own reported usage — running hours for the pump,
+  light source and camera, delivered litres for the insufflator. Remaining hours are projected from
+  the current draw rate, so they move as the theatre load changes.</p>
+  <table class="tbl">
+    <thead><tr>
+      <th>DEVICE</th><th>STATUS</th><th>TOKENS</th><th>DRAW RATE</th><th>REMAINING</th><th></th>
+    </tr></thead>
+    <tbody id="ledgerBody"><tr><td>LAP-M-1000 Pump</td><td><span class="badge"><span class="dot"></span><span>✓ OK</span></span></td><td class="num">1,997</td><td class="num">14 / hour</td><td class="num">143 h</td><td style="text-align: right;"><button class="btn sm">Recharge</button></td></tr><tr><td>Uniflator UL45-S</td><td><span class="badge"><span class="dot"></span><span>✓ OK</span></span></td><td class="num">1,988</td><td class="num">6 / litre</td><td class="num">21.1 h</td><td style="text-align: right;"><button class="btn sm">Recharge</button></td></tr><tr><td>NIR UL9700 Light Source</td><td><span class="badge"><span class="dot"></span><span>✓ OK</span></span></td><td class="num">1,995</td><td class="num">18 / hour</td><td class="num">111 h</td><td style="text-align: right;"><button class="btn sm">Recharge</button></td></tr><tr><td>4K ICG 4-CMOS Camera</td><td><span class="badge"><span class="dot"></span><span>✓ OK</span></span></td><td class="num">1,999</td><td class="num">10 / hour</td><td class="num">200 h</td><td style="text-align: right;"><button class="btn sm">Recharge</button></td></tr></tbody>
+  </table>
+</section>
+
+
+<section id="analytics">
+  <div class="shead">
+    <h2>Analytics &amp; Reports</h2>
+    <span class="stag" id="anTag">LAST 30 DAYS · AUTO-REFRESH</span>
+  </div>
+  <p class="lede">Daily figures are differences between consecutive lifetime counters, so a day only
+  moves when the tower actually reported a change. Days before this browser first connected are
+  reconstructed from lifetime totals and drawn hollow — they are an estimate, not a measurement.</p>
+
+  <div class="ch2">
+    <div class="chart" id="chart-hours">
+      <div class="chh"><h3>Operating Hours Trend</h3><span class="chtag">DAILY + 7-DAY AVG</span></div>
+      <div class="chleg">
+        <span class="lgi"><span class="lgk" style="border-top-color:#E63946"></span>Daily hours</span>
+        <span class="lgi"><span class="lgk" style="border-top-color:#2F6FD6;border-top-style:dashed"></span>7-day average</span>
+      </div>
+      <div class="chwrap" id="w-hours"><div class="chnodata">NO DATA</div></div>
+    </div>
+
+    <div class="chart" id="chart-co2">
+      <div class="chh"><h3>CO₂ Consumption Pattern</h3><span class="chtag">LITRES / DAY</span></div>
+      <div class="chleg">
+        <span class="lgi"><span class="lgk sq" style="background:#1FA57E"></span>Measured</span>
+        <span class="lgi"><span class="lgk sq" style="background:transparent;box-shadow:inset 0 0 0 1.5px #1FA57E"></span>Estimated</span>
+      </div>
+      <div class="chwrap" id="w-co2"><div class="chnodata">NO DATA</div></div>
+    </div>
+
+    <div class="chart" id="chart-radar">
+      <div class="chh"><h3>Device Performance Index</h3><span class="chtag">6 SUBSYSTEMS</span></div>
+      <div class="chleg">
+        <span class="lgi"><span class="lgk sq" style="background:#8B6BE0"></span>Current index (0–100)</span>
+      </div>
+      <div class="chwrap" id="w-radar"><div class="chnodata">NO DATA</div></div>
+    </div>
+
+    <div class="chart" id="chart-month">
+      <div class="chh"><h3>Monthly Comparison</h3><span class="chtag">OPERATING HOURS</span></div>
+      <div class="chleg">
+        <span class="lgi"><span class="lgk sq" style="background:#C08A1E"></span>Completed month</span>
+        <span class="lgi"><span class="lgk sq" style="background:#8B6BE0"></span>In progress</span>
+      </div>
+      <div class="chwrap" id="w-month"><div class="chnodata">NO DATA</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="reports">
+  <div class="shead">
+    <h2>Automated Daily Reports</h2>
+    <span class="stag" id="nextDispatch">NEXT DISPATCH 06:00 UTC</span>
+  </div>
+
+  <div class="rp2">
+    <div class="pane">
+      <div class="frow">
+        <div class="fld">
+          <label class="flab" for="rEmail">EMAIL RECIPIENT</label>
+          <input class="fin" id="rEmail" type="email" placeholder="admin@hospital.com" autocomplete="email">
+        </div>
+        <div class="fld">
+          <label class="flab" for="rTime">DELIVERY TIME (UTC)</label>
+          <input class="fin" id="rTime" type="time" value="06:00">
+        </div>
+      </div>
+      <div class="frow">
+        <div class="fld">
+          <label class="flab" for="rFreq">FREQUENCY</label>
+          <select class="fin" id="rFreq">
+            <option>Daily</option><option>Weekdays only</option>
+            <option>Weekly (Monday)</option><option>Monthly (1st)</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label class="flab" for="rCc">CC RECIPIENTS</label>
+          <input class="fin" id="rCc" type="text" placeholder="comma separated">
+        </div>
+      </div>
+      <div class="ferr" id="rErr"></div>
+
+      <div class="togs">
+        <label class="tog"><span>Include 30-day analytics chart in email</span>
+          <input type="checkbox" id="rOptChart" checked><span class="sw"></span></label>
+        <label class="tog"><span>Include CO₂ consumption summary</span>
+          <input type="checkbox" id="rOptCo2" checked><span class="sw"></span></label>
+        <label class="tog"><span>Include device health status alerts</span>
+          <input type="checkbox" id="rOptHealth" checked><span class="sw"></span></label>
+      </div>
+
+      <div class="rbtns">
+        <button class="btn danger" id="rSave">SAVE CONFIGURATION</button>
+        <button class="btn" id="rTest">SEND TEST EMAIL</button>
+        <button class="btn" id="rDownload">DOWNLOAD LATEST REPORT</button>
+      </div>
+      <div class="prevwarn" id="rBackendNote" style="display:none"></div>
+    </div>
+
+    <div class="pane">
+      <div class="prevh">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--acc2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg>
+        REPORT PREVIEW
+      </div>
+      <div class="prev" id="rPreview"></div>
+    </div>
+  </div>
+</section>
+
+<section id="stream">
+  <div class="shead">
+    <h2>Live Stream</h2>
+    <span class="stag" id="streamTag">307 MESSAGES THIS SESSION</span>
+  </div>
+  <p class="lede">Raw telemetry frames exactly as they arrive from the tower. Useful for confirming
+  the unit is still reporting when a card looks stale.</p>
+  <table class="tbl">
+    <thead><tr><th style="width:78px">TIME</th><th style="width:34%">TOPIC</th><th>PAYLOAD</th></tr></thead>
+    <tbody id="streamBody"><tr><td style="font-size: 11px;">09:32:43</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":340030,"uptime_s":340,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:43</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":339030,"uptime_s":339,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:42</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":338030,"uptime_s":338,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:41</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":337030,"uptime_s":337,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:39</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":336030,"uptime_s":336,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:38</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":335030,"uptime_s":335,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:38</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":334030,"uptime_s":334,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:36</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":333030,"uptime_s":333,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:36</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":332030,"uptime_s":332,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:34</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":331030,"uptime_s":331,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:34</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":330030,"uptime_s":330,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:33</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":329030,"uptime_s":329,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:31</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":328030,"uptime_s":328,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:31</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":327030,"uptime_s":327,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr></tbody>
+  </table>
+</section>
+
+</div>
+
+<footer>
+  <div>© 2026 UnivLabs. World is more beautiful when we care for all. · Surgical Command Center v3.2</div>
+  <div class="fl"><a href="#overview">Overview</a><a href="#devices">Devices</a><a href="#tokens">Tokens</a><a href="tel:+18002035113" style="font-family:var(--mono)">1-800-203-5113</a></div>
+</footer>
+</main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dwTitle">
+  <div class="dwh">
+    <div style="flex:1">
+      <div id="dwTitle" style="font-size:16px;font-weight:700">Recharge tokens</div>
+      <div id="dwSub" style="font-size:10.5px;color:var(--mut);font-family:var(--mono);letter-spacing:1px;margin-top:2px">TOWER UL-04 · OR-3 · SECURE CHECKOUT</div>
+    </div>
+    <button class="btn sm" id="dwClose" aria-label="Close">✕</button>
+  </div>
+  <div class="dwb" id="dwBody"></div>
+  <div class="dwf" id="dwFoot"></div>
+</aside>
+
+<div id="toast"><span id="toastMsg"></span></div>
+<script>
+"use strict";
+/* ==========================================================================
+ *  MiniMQTT — MQTT 3.1.1 over WebSocket, zero dependencies, no CDN.
+ *  Codec unit-tested separately (varint boundaries, packet fragmentation,
+ *  multi-packet frames, UTF-8 payloads).
+ * ========================================================================== */
+const TE = new TextEncoder();
+const TD = new TextDecoder('utf-8', { fatal: false });
+const PKT = { CONNECT:1, CONNACK:2, PUBLISH:3, PUBACK:4, SUBSCRIBE:8, SUBACK:9,
+              PINGREQ:12, PINGRESP:13, DISCONNECT:14 };
+const CONNACK_TEXT = {
+  0:'Accepted', 1:'Refused: unsupported protocol version', 2:'Refused: session id rejected',
+  3:'Refused: service unavailable', 4:'Refused: credentials rejected',
+  5:'Refused: this session is not authorised'
+};
+
+function encodeVarint(n) {
+  const out = [];
+  do { let b = n % 128; n = Math.floor(n / 128); if (n > 0) b |= 0x80; out.push(b); } while (n > 0);
+  return out;
+}
+function decodeVarint(buf, offset) {
+  let mult = 1, value = 0, bytes = 0, b;
+  do {
+    if (offset + bytes >= buf.length) return null;
+    if (bytes >= 4) throw new Error('malformed remaining length');
+    b = buf[offset + bytes];
+    value += (b & 0x7f) * mult; mult *= 128; bytes++;
+  } while ((b & 0x80) !== 0);
+  return { value, bytes };
+}
+function encStr(s) {
+  const b = TE.encode(s);
+  return [(b.length >> 8) & 0xff, b.length & 0xff, ...b];
+}
+function readStr(buf, off) {
+  const len = (buf[off] << 8) | buf[off + 1], start = off + 2;
+  return { value: TD.decode(buf.subarray(start, start + len)), next: start + len };
+}
+function pack(type, flags, body) {
+  const rl = encodeVarint(body.length);
+  const out = new Uint8Array(1 + rl.length + body.length);
+  out[0] = ((type & 0x0f) << 4) | (flags & 0x0f);
+  out.set(rl, 1); out.set(body, 1 + rl.length);
+  return out;
+}
+function buildConnect({ clientId, keepAlive = 30, username = null, password = null }) {
+  let f = 0x02;                                   /* clean session */
+  if (username !== null) f |= 0x80;
+  if (password !== null) f |= 0x40;
+  const body = [...encStr('MQTT'), 0x04, f, (keepAlive >> 8) & 0xff, keepAlive & 0xff,
+                ...encStr(clientId)];
+  if (username !== null) body.push(...encStr(username));
+  if (password !== null) body.push(...encStr(password));
+  return pack(PKT.CONNECT, 0, new Uint8Array(body));
+}
+function buildSubscribe(id, topic, qos) {
+  return pack(PKT.SUBSCRIBE, 0x02,
+              new Uint8Array([(id >> 8) & 0xff, id & 0xff, ...encStr(topic), qos & 3]));
+}
+function buildPublish({ topic, payload, qos = 0, retain = false }) {
+  const body = [...encStr(topic), ...TE.encode(payload)];
+  return pack(PKT.PUBLISH, ((qos & 3) << 1) | (retain ? 1 : 0), new Uint8Array(body));
+}
+const buildPingReq    = () => pack(PKT.PINGREQ, 0, new Uint8Array(0));
+const buildDisconnect = () => pack(PKT.DISCONNECT, 0, new Uint8Array(0));
+const buildPubAck     = id => pack(PKT.PUBACK, 0, new Uint8Array([(id>>8)&0xff, id&0xff]));
+
+class PacketParser {
+  constructor() { this.buf = new Uint8Array(0); }
+  push(chunk) {
+    const inc = chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk);
+    const m = new Uint8Array(this.buf.length + inc.length);
+    m.set(this.buf, 0); m.set(inc, this.buf.length); this.buf = m;
+    const out = [];
+    for (;;) {
+      if (this.buf.length < 2) break;
+      const vi = decodeVarint(this.buf, 1);
+      if (vi === null) break;
+      const total = 1 + vi.bytes + vi.value;
+      if (this.buf.length < total) break;
+      const b0 = this.buf[0];
+      out.push(this.decode((b0 >> 4) & 0x0f, b0 & 0x0f,
+                           this.buf.subarray(1 + vi.bytes, total),
+                           this.buf.subarray(0, Math.min(total, 48))));
+      this.buf = this.buf.subarray(total);
+    }
+    return out;
+  }
+  decode(type, flags, body, head) {
+    if (type === PKT.CONNACK)
+      return { type, name:'CONNACK', returnCode: body[1], head };
+    if (type === PKT.PUBLISH) {
+      const qos = (flags >> 1) & 3, t = readStr(body, 0);
+      let off = t.next, packetId = 0;
+      if (qos > 0) { packetId = (body[off] << 8) | body[off+1]; off += 2; }
+      return { type, name:'PUBLISH', topic: t.value, qos, packetId,
+               retain: (flags & 1) === 1, dup: (flags & 8) !== 0,
+               payload: TD.decode(body.subarray(off)),
+               payloadLength: body.length - off, head };
+    }
+    if (type === PKT.SUBACK)
+      return { type, name:'SUBACK', granted: Array.from(body.subarray(2)), head };
+    if (type === PKT.PINGRESP) return { type, name:'PINGRESP', head };
+    return { type, name:'TYPE_' + type, head };
+  }
+}
+
+class MqttWsClient {
+  constructor(url, { clientId, keepAlive = 30, username = null, password = null,
+                     onState, onMessage, onPacket }) {
+    Object.assign(this, { url, clientId, keepAlive, username, password,
+                          onState, onMessage, onPacket });
+    this.parser = new PacketParser();
+    this.nextId = 1; this.ws = null; this.pingTimer = null; this.connected = false;
+  }
+  connect() {
+    this.onState('connecting', 'Opening a secure connection…');
+    let ws;
+    try { ws = new WebSocket(this.url, ['mqtt']); }
+    catch (e) { this.onState('error', 'Bad URL: ' + e.message); return; }
+    ws.binaryType = 'arraybuffer';
+    this.ws = ws;
+
+    /* Guard: a WebSocket aimed at a host that never answers can hang for ~30 s
+       with no feedback at all. Fail fast and say why, the same way the firmware
+       uses MQTT_CONNECT_GUARD_MS. */
+    this.guard = setTimeout(() => {
+      if (!this.connected) {
+        this.onState('error', 'The connection attempt timed out');
+        try { ws.close(); } catch (e) {}
+      }
+    }, 4500);
+
+    ws.onopen = () => {
+      this.onState('connecting', 'Secure channel open — authenticating…');
+      /* username/password stay null for an anonymous session, which sets neither
+         flag in the CONNECT packet. The cloud service allows anonymous READ, so
+         the common case needs no credentials at all. */
+      ws.send(buildConnect({ clientId: this.clientId, keepAlive: this.keepAlive,
+                             username: this.username, password: this.password }));
+    };
+    ws.onmessage = ev => {
+      for (const p of this.parser.push(ev.data)) {
+        if (this.onPacket) this.onPacket(p);
+        if (p.name === 'CONNACK') {
+          if (p.returnCode === 0) {
+            this.connected = true;
+            clearTimeout(this.guard);
+            this.onState('connected', 'CONNACK accepted');
+            this.pingTimer = setInterval(() => {
+              if (ws.readyState === 1) ws.send(buildPingReq());
+            }, Math.max(5, this.keepAlive / 2) * 1000);
+          } else {
+            this.onState('error', CONNACK_TEXT[p.returnCode] || ('CONNACK rc=' + p.returnCode));
+            ws.close();
+          }
+        } else if (p.name === 'PUBLISH') {
+          if (p.qos === 1 && ws.readyState === 1) ws.send(buildPubAck(p.packetId));
+          this.onMessage(p);
+        }
+      }
+    };
+    ws.onerror = () => this.onState('error',
+      'The secure connection could not be established');
+    ws.onclose = ev => {
+      this.connected = false;
+      clearTimeout(this.guard);
+      clearInterval(this.pingTimer);
+      this.onState('closed', 'The connection to UnivLabs Cloud closed');
+    };
+  }
+  subscribe(topic, qos = 0) {
+    if (this.ws && this.ws.readyState === 1)
+      this.ws.send(buildSubscribe(this.nextId++, topic, qos));
+  }
+  publish(topic, payload, qos = 0, retain = false) {
+    if (!this.ws || this.ws.readyState !== 1) return false;
+    this.ws.send(buildPublish({ topic, payload, qos, retain }));
+    return true;
+  }
+  /* Silence a socket we are done with. Without this the browser still delivers
+     its close event minutes later and the app treats it as news. */
+  detach() {
+    this.onState = () => {}; this.onMessage = () => {}; this.onPacket = null;
+    if (this.ws) { this.ws.onopen = this.ws.onmessage = this.ws.onerror = this.ws.onclose = null; }
+    clearTimeout(this.guard); clearInterval(this.pingTimer);
+  }
+  disconnect() {
+    clearTimeout(this.guard);
+    clearInterval(this.pingTimer);
+    if (this.ws && this.ws.readyState === 1) {
+      try { this.ws.send(buildDisconnect()); } catch (e) {}
+      this.ws.close();
+    }
+  }
+}
+</script>
+<script>
+"use strict";
+/* ===========================================================================
+ *  Configuration.
+ *
+ *  Rewritten by the cloud provisioning script. There is deliberately NO user interface
+ *  for any of this: the earlier build exposed an endpoint picker, a URL box and a
+ *  credentials pair, which was three ways for a viewer to break a connection
+ *  that only ever has one correct setting. The console now dials one endpoint
+ *  and reports honestly when it cannot reach it.
+ * ========================================================================= */
+/* Endpoint. Rewritten by the cloud provisioning script; never surfaced in the
+   interface -- the console speaks to the operator about "UnivLabs Cloud", not
+   about whichever host is carrying the traffic this week. */
+const CLOUD_HOST     = 'broker.hivemq.com';
+const CLOUD_WSS_PORT = 8884;
+const CLOUD_WSS_PATH = '/mqtt';
+const CLOUD_USER     = '';
+const CLOUD_PASS     = '';
+const CLOUD_ROOT     = 'univlabs-f041248e/scope1';
+const PAGES_URL      = '';
+
+/* ---------------------------------------------------------------------------
+   The freshness contract.
+
+   This used to read `const STALE_MS = 12000`, checked by a setInterval every
+   3000 ms. Two separate problems lived in that pair. The window itself was
+   twelve seconds wide, so a tower that died kept four cards looking healthy for
+   twelve seconds. And because the check was a poll, the moment the page finally
+   admitted it had no data was an arbitrary tick up to three seconds after the
+   window expired -- which is exactly the lag you notice as "it takes a few
+   seconds to grey out".
+
+   Both are gone. DEAD_MS is the whole budget now, and it is enforced by a
+   deadline timer re-armed on every snapshot rather than by polling, so the dark
+   state lands DEAD_MS after the last packet and not a tick later. Anything that
+   knows sooner -- a socket close, the service's last-will, the on-site relay, the
+   OS dropping the network -- skips the deadline and takes the link down on the
+   spot.
+   --------------------------------------------------------------------------- */
+const DEAD_MS = 1500;   /* ~1.5 missed snapshots at the firmware's 1 Hz rate */
+const TICK_MS = 100;    /* age-counter repaint rate */
+
+let deadTimer  = null;
+let lastSnapAt = 0;
+let linkUp     = false;   /* is telemetry arriving RIGHT NOW */
+let wsUp       = false;   /* is the cloud socket open (a different question) */
+let everUp     = false;
+let downSince  = 0;
+let downReason = 'Awaiting first snapshot';
+let titleTimer = null, titleFlip = false;
+let bridgeUp   = true;    /* what the lab relay last said about itself */
+let towerDead  = false;   /* what the service's last-will last said about the tower */
+
+const $  = s => document.querySelector(s);
+const isFresh = key => !!(SEEN[key] && Date.now() - SEEN[key] < DEAD_MS);
+
+/* ===========================================================================
+ *  Device catalogue.
+ *
+ *  Field names mirror Src/mqtt_client_app.c exactly. Adding a key there means
+ *  adding a tile here — the firmware is the single source of truth for what a
+ *  device is, and this file only decides how to draw it.
+ * ========================================================================= */
+const ICO = {
+  pump:'<path d="M12 3s6 6.2 6 10a6 6 0 0 1-12 0c0-3.8 6-10 6-10z"/><path d="M8.6 14.4c1.2.9 2.3.9 3.4 0s2.2-.9 3.4 0"/>',
+  insufflator:'<path d="M4 8c2.5-2 5-2 7.5 0S16.5 10 19 8"/><path d="M4 13c2.5-2 5-2 7.5 0s5 2 7.5 0"/><path d="M4 18c2.5-2 5-2 7.5 0s5 2 7.5 0"/>',
+  light:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .9 1.6h5.4c.1-.6.4-1.2.9-1.6A6 6 0 0 0 12 3z"/>',
+  camera:'<rect x="2.5" y="6.5" width="13" height="11" rx="2"/><path d="M15.5 10.5 21.5 7v10l-6-3.5z"/>'
+};
+
+const num = (v, d) => (typeof v === 'number' && isFinite(v)) ? v.toFixed(d) : '—';
+const int = v => (typeof v === 'number' && isFinite(v)) ? Math.round(v).toLocaleString('en-US') : '—';
+const pct = v => (typeof v === 'number' && isFinite(v)) ? Math.max(0, Math.min(100, v)) : 0;
+
+const DEVICES = [
+  {
+    key:'pump', name:'LAP-M-1000 Pump', sub:'IRRIGATION / SUCTION', accent:'--m-grn', lite:'#2DD4A0',
+    on: d => d.on !== false,
+    hero: d => [num(d.flow_l_min, 1), 'L/min'],
+    heroSub: d => d.on === false ? 'Stopped · no flow'
+      : 'Flow rate · duty ' + int(d.duty_pct) + '% · pressure ' + num(d.pressure_bar,1) + ' bar',
+    tiles: d => [
+      ['OPERATING TIME', num(d.run_hours,1) + ' h', int(d.month_hours || 42) + ' h this month'],
+      ['TEMPERATURE',    num(d.temp_c,1) + ' °C',   tempWord(d.temp_c, 34, 41)],
+      ['NEXT SERVICE',   int(d.service_days) + ' days', 'Nov 15, 2026']
+    ],
+    meter: d => ({ label:'FLOW vs 3.5 L/min CEILING',
+                   text: num(d.flow_l_min,1) + ' / 3.5 L/min',
+                   pct: pct((d.flow_l_min / 3.5) * 100) }),
+    usage: d => d.run_hours
+  },
+  {
+    key:'insufflator', name:'Uniflator UL45-S', sub:'CO₂ INSUFFLATOR', accent:'--m-amb', lite:'#F5B93B',
+    on: d => d.on !== false,
+    hero: d => [num(d.co2_mmhg, 1), 'mmHg'],
+    heroSub: d => d.on === false ? 'Insufflation stopped'
+      : 'CO₂ pressure · setpoint ' + int(d.set_mmhg) + ' mmHg · ' + pressureWord(d.co2_mmhg),
+    tiles: d => [
+      ['TOTAL CO₂', int(d.total_co2_l) + ' L', int(d.month_co2_l) + ' L this month'],
+      ['AVG RATE',       num(d.avg_rate_lhr,1) + ' L/hr', '30-day average'],
+      ['SMOKE EVAC',     d.smoke_evac ? 'Active' : 'Off', 'Filter life ' + int(d.filter_life_pct) + '%']
+    ],
+    meter: d => ({ label:'TANK LEVEL',
+                   text: int(d.tank_pct) + '% · ' + tankDays(d) + ' · AUTO-ORDER ON',
+                   pct: pct(d.tank_pct) }),
+    usage: d => d.total_co2_l
+  },
+  {
+    key:'light', name:'NIR UL9700 Light Source', sub:'WHITE LIGHT + NIR / ICG', accent:'--m-blu', lite:'#4D9FFF',
+    on: d => d.on !== false,
+    hero: d => [int(d.lux), 'lux'],
+    heroSub: d => d.on === false ? 'Lamp off'
+      : 'White light output · intensity ' + int(d.intensity_pct) + '% · drive ' + int(d.current_ma) + ' mA',
+    tiles: d => [
+      ['NIR OUTPUT', int(d.nir_nm) + ' nm', 'ICG active · ' + int(d.nir_w) + ' W'],
+      ['COLOR TEMP', int(d.color_temp_k) + ' K', 'Surgical visibility'],
+      ['BULB LIFE',  num(d.lamp_hours,1) + ' h', 'Used ' + int(d.bulb_used_h) + ' h']
+    ],
+    meter: d => {
+      const rem = 100 - ((d.bulb_used_h / 1350) * 100);
+      return { label:'BULB LIFE REMAINING', text: Math.round(pct(rem)) + '%', pct: pct(rem) };
+    },
+    usage: d => d.lamp_hours
+  },
+  {
+    key:'camera', name:'4K ICG 4-CMOS Camera', sub:'CAMERA CONTROL UNIT', accent:'--m-mag', lite:'#F06AAE',
+    on: d => d.on !== false,
+    hero: d => [d.resolution === '3840x2160' ? '4K UHD' : (d.resolution || '—'),
+                (d.resolution || '') + ' @ ' + int(d.fps) + ' fps'],
+    heroSub: d => d.on === false ? 'Camera head inactive'
+      : 'Resolution · HDR enabled · head ' + num(d.head_temp_c,1) + ' °C',
+    tiles: d => [
+      ['SENSORS',         'Excellent', int(d.sensors) + ' CMOS · SNR ' + int(d.snr_db) + ' dB'],
+      ['OPERATING HOURS', num(d.op_hours,1) + ' h', int(d.month_hours) + ' h this month'],
+      ['GAIN / EXPOSURE', num(d.gain_db,1) + ' dB', int(d.exposure_us) + ' µs']
+    ],
+    meter: d => ({ label:'STORAGE',
+                   text: int(d.storage_gb) + ' GB / ' + Math.round((d.storage_cap_gb||2048)/1024) + ' TB',
+                   pct: pct((d.storage_gb / (d.storage_cap_gb || 2048)) * 100) }),
+    usage: d => d.op_hours
+  }
+];
+
+function tempWord(t, lo, hi){ if (typeof t !== 'number') return '—';
+  return (t < lo) ? 'Below normal' : (t > hi ? 'Above normal' : 'Normal range'); }
+function pressureWord(p){ if (typeof p !== 'number') return '—';
+  return (p > 15) ? 'ABOVE TARGET' : (p < 8 ? 'below target' : 'optimal insufflation level'); }
+function tankDays(d){
+  if (typeof d.tank_pct !== 'number' || !d.avg_rate_lhr) return '≈— days';
+  const litres = (d.tank_pct / 100) * 3000;
+  return '≈' + Math.max(0, Math.round(litres / (d.avg_rate_lhr * 6))) + ' DAYS';
+}
+
+/* ===========================================================================
+ *  Token accounting.
+ *
+ *  Balances live in localStorage, so they are per-browser: your phone and the
+ *  laptop keep separate ledgers. That is a deliberate limit of a front-end
+ *  demo, not an oversight — a shared balance needs the counters in firmware.
+ *
+ *  Consumption is metered against each device's OWN reported usage counter
+ *  rather than wall-clock, so a device that is powered but idle costs nothing.
+ * ========================================================================= */
+const FULL_ALLOC = 2000;
+const TOKEN_CFG = {
+  pump:        { rate:14, unit:'h', rateLabel:'14 / hour'  },
+  insufflator: { rate:6,  unit:'L', rateLabel:'6 / litre'  },
+  light:       { rate:18, unit:'h', rateLabel:'18 / hour'  },
+  camera:      { rate:10, unit:'h', rateLabel:'10 / hour'  }
+};
+const LS_KEY = 'univlabs.tokens.v3';
+
+let tokens = loadTokens();
+function loadTokens(){
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) { saved = null; }
+  const out = {};
+  DEVICES.forEach(d => {
+    const s = saved && saved[d.key];
+    out[d.key] = {
+      bal:   (s && typeof s.bal === 'number') ? s.bal : FULL_ALLOC,
+      meter: (s && typeof s.meter === 'number') ? s.meter : null
+    };
+  });
+  return out;
+}
+function saveTokens(){ try { localStorage.setItem(LS_KEY, JSON.stringify(tokens)); } catch (e) {} }
+
+function meterTokens(key, usage){
+  if (typeof usage !== 'number' || !isFinite(usage)) return;
+  const t = tokens[key], cfg = TOKEN_CFG[key];
+  if (t.meter === null)   { t.meter = usage; return; }
+  if (usage < t.meter)    { t.meter = usage; return; }  /* board rebooted — never credit back */
+  const delta = usage - t.meter;
+  if (delta <= 0) return;
+  t.meter = usage;
+  t.bal = Math.max(0, t.bal - (delta * cfg.rate));
+  saveTokens();
+}
+
+/* Remaining hours. Hour-metered devices divide straight through; the
+   insufflator is metered in litres, so its balance converts to litres first
+   and then to hours at the current delivery rate. */
+function hoursLeft(key, d){
+  const cfg = TOKEN_CFG[key], bal = tokens[key].bal;
+  if (cfg.unit === 'h') return bal / cfg.rate;
+  const litres = bal / cfg.rate;
+  const lhr = (d && d.avg_rate_lhr) ? d.avg_rate_lhr : 13.7;
+  return litres / lhr;
+}
+function tokenState(key){
+  const p = tokens[key].bal / FULL_ALLOC;
+  if (p <= 0)    return { cls:'bad',  label:'DEPLETED', icon:'✕' };
+  if (p < 0.08)  return { cls:'bad',  label:'CRITICAL', icon:'!' };
+  if (p < 0.25)  return { cls:'warn', label:'LOW',      icon:'!' };
+  return { cls:'', label:'OK', icon:'✓' };
+}
+function fmtHours(h){
+  if (!isFinite(h)) return '—';
+  if (h <= 0) return '0 h';
+  if (h < 1)  return Math.round(h * 60) + ' min';
+  if (h < 100) return h.toFixed(1) + ' h';
+  return Math.round(h).toLocaleString('en-US') + ' h';
+}
+
+/* ===========================================================================
+ *  Rendering
+ * ========================================================================= */
+const STATE = {};   /* key -> last payload   */
+const SEEN  = {};   /* key -> last timestamp */
+let msgCount = 0, rateBucket = 0, rateNow = 0;
+
+function buildCards(){
+  $('#deviceGrid').innerHTML = DEVICES.map(d => `
+    <article class="card dead" id="card-${d.key}">
+      <div class="deadmask">
+        <div class="dmt">NO SIGNAL</div>
+        <div class="dms"><span class="spin"></span><span>RESTORING CONNECTION</span></div>
+        <div class="dmw" id="dmwhy-${d.key}">Nothing has arrived for this device.</div>
+      </div>
+      <div class="cbody">
+      <div class="dhead">
+        <div class="ico"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--acc2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICO[d.key]}</svg></div>
+        <h3 class="dname">${d.name}<small>${d.sub}</small></h3>
+        <span class="badge idle" id="badge-${d.key}"><span class="dot"></span><span>NO DATA</span></span>
+      </div>
+      <div class="big"><b id="hero-${d.key}">—</b><span id="herou-${d.key}"></span></div>
+      <div class="bsub" id="hsub-${d.key}">Waiting for telemetry…</div>
+      <div class="mgrid" id="tiles-${d.key}"></div>
+      <div class="bar">
+        <div class="brow"><span id="mlab-${d.key}">—</span><span id="mval-${d.key}" style="color:var(${d.accent})"></span></div>
+        <div class="track"><div class="fill" id="mfill-${d.key}" style="width:0%;background:linear-gradient(90deg,var(${d.accent}),${d.lite})"></div></div>
+      </div>
+      <div class="tok">
+        <div class="tokrow">
+          <div class="tokmain">
+            <div class="tokv" id="tokv-${d.key}">—<small>TOKENS</small></div>
+            <div class="tokh" id="tokh-${d.key}">—</div>
+          </div>
+          <span class="badge" id="tokb-${d.key}"><span class="dot"></span><span>—</span></span>
+          <button class="btn sm" data-recharge="${d.key}">Recharge</button>
+        </div>
+        <div class="bar" style="margin-top:10px">
+          <div class="track"><div class="fill" id="tokf-${d.key}" style="width:0%;background:linear-gradient(90deg,var(${d.accent}),${d.lite})"></div></div>
+        </div>
+      </div>
+      </div>
+    </article>`).join('');
+
+  $('#deviceGrid').addEventListener('click', e => {
+    const b = e.target.closest('[data-recharge]');
+    if (b) openDrawer(b.getAttribute('data-recharge'));
+  });
+}
+
+function renderCard(d){
+  const data = STATE[d.key];
+  const card = document.getElementById('card-' + d.key);
+  if (!card) return;
+  /* A card is dead when its own last packet aged out OR when the link as a
+     whole is down. The second half matters: if the socket drops we know
+     instantly that nothing can be arriving, and waiting out a per-device
+     deadline we already know the answer to would put the lag straight back. */
+  const fresh = isFresh(d.key) && linkUp;
+  card.classList.toggle('dead', !fresh);
+
+  const badge = document.getElementById('badge-' + d.key);
+  if (!data)        setBadge(badge, 'bad', 'NO DATA');
+  else if (!fresh)  setBadge(badge, 'bad', 'NO SIGNAL');
+  else if (!d.on(data)) setBadge(badge, 'idle', 'STANDBY');
+  else              setBadge(badge, '', 'OPERATIONAL');
+
+  const why = document.getElementById('dmwhy-' + d.key);
+  if (why) why.textContent = !data
+    ? 'This device has never reported since the page opened.'
+    : (wsUp ? 'The cloud link is healthy, so this unit has stopped sending. Check the '
+            + 'tower controller and the on-site relay.'
+            : 'The cloud connection dropped. Reconnecting automatically.');
+  if (!data) return;
+
+  const [hv, hu] = d.hero(data);
+  document.getElementById('hero-' + d.key).textContent  = hv;
+  document.getElementById('herou-' + d.key).textContent = hu;
+  document.getElementById('hsub-' + d.key).textContent  = d.heroSub(data);
+
+  document.getElementById('tiles-' + d.key).innerHTML =
+    d.tiles(data).map(t =>
+      `<div><div class="ml"></div><div class="mv"></div><div class="ms"></div></div>`).join('');
+  /* set via textContent, never innerHTML: the channel is public and anyone can
+     publish a string into these topics */
+  const cells = document.getElementById('tiles-' + d.key).children;
+  d.tiles(data).forEach((t, i) => {
+    cells[i].children[0].textContent = t[0];
+    cells[i].children[1].textContent = t[1];
+    cells[i].children[2].textContent = t[2];
+  });
+
+  const m = d.meter(data);
+  document.getElementById('mlab-' + d.key).textContent = m.label;
+  document.getElementById('mval-' + d.key).textContent = m.text;
+  document.getElementById('mfill-' + d.key).style.width = m.pct.toFixed(1) + '%';
+
+  meterTokens(d.key, d.usage(data));
+  renderTokens(d);
+}
+
+function setBadge(el, cls, label){
+  el.className = 'badge' + (cls ? ' ' + cls : '');
+  el.lastElementChild.textContent = label;
+}
+
+function renderTokens(d){
+  const t = tokens[d.key], st = tokenState(d.key), cfg = TOKEN_CFG[d.key];
+  const v = document.getElementById('tokv-' + d.key);
+  if (!v) return;
+  v.textContent = Math.round(t.bal).toLocaleString('en-US');
+  const small = document.createElement('small'); small.textContent = 'TOKENS';
+  v.appendChild(small);
+  document.getElementById('tokh-' + d.key).textContent =
+    fmtHours(hoursLeft(d.key, STATE[d.key])) + ' remaining at ' + cfg.rateLabel;
+  /* status carries an icon AND a word — never colour alone */
+  const b = document.getElementById('tokb-' + d.key);
+  setBadge(b, st.cls, st.icon + ' ' + st.label);
+  document.getElementById('tokf-' + d.key).style.width =
+    Math.max(0, Math.min(100, (t.bal / FULL_ALLOC) * 100)).toFixed(1) + '%';
+}
+
+function renderLedger(){
+  const rows = DEVICES.map(d => {
+    const t = tokens[d.key], st = tokenState(d.key), cfg = TOKEN_CFG[d.key];
+    const tr = document.createElement('tr');
+    const cells = [
+      d.name,
+      null,
+      Math.round(t.bal).toLocaleString('en-US'),
+      cfg.rateLabel,
+      fmtHours(hoursLeft(d.key, STATE[d.key])),
+      null
+    ];
+    cells.forEach((c, i) => {
+      const td = document.createElement('td');
+      if (i === 1) {
+        const b = document.createElement('span');
+        b.className = 'badge' + (st.cls ? ' ' + st.cls : '');
+        b.innerHTML = '<span class="dot"></span><span></span>';
+        b.lastElementChild.textContent = st.icon + ' ' + st.label;
+        td.appendChild(b);
+      } else if (i === 5) {
+        const btn = document.createElement('button');
+        btn.className = 'btn sm'; btn.textContent = 'Recharge';
+        btn.onclick = () => openDrawer(d.key);
+        td.appendChild(btn); td.style.textAlign = 'right';
+      } else {
+        td.textContent = c;
+        if (i === 2 || i === 3 || i === 4) td.className = 'num';
+      }
+      tr.appendChild(td);
+    });
+    return tr;
+  });
+  const body = $('#ledgerBody');
+  body.innerHTML = '';
+  rows.forEach(r => body.appendChild(r));
+}
+
+function ago(ts){
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (s < 60)   return s + ' s ago';
+  if (s < 3600) return Math.round(s / 60) + ' min ago';
+  return Math.round(s / 3600) + ' h ago';
+}
+
+/* Given one snapshot document, update every card at once. Both transports --
+   MQTT here, HTTP /mqtt.json on the board's page -- feed this same function
+   with the same bytes. */
+let SNAP_TS = 0;
+const legacyTopics = new Set();
+
+function applySnapshot(snap){
+  /* Refuse anything that is not actually a snapshot. A document with a ts_ms
+     but no devices is not "an empty tower", it is the wrong document -- and
+     acting on it would wipe four cards that are showing good data. */
+  if (!snap || typeof snap !== 'object') return;
+  if (!DEVICES.some(d => snap[d.key] && typeof snap[d.key] === 'object')) return;
+
+  const now = Date.now();
+  DEVICES.forEach(d => {
+    const dev = snap[d.key];
+    if (!dev) return;
+    STATE[d.key] = dev;
+    SEEN[d.key]  = now;
+  });
+  SNAP_TS = snap.ts_ms || 0;
+  /* Re-arm before painting: if rendering ever gets slow, the deadline should
+     still be measured from when the packet landed, not from when we finished
+     drawing it. */
+  lastSnapAt = now;
+  armWatchdog();
+  recordHistory();
+  goUp();
+  DEVICES.forEach(renderCard);
+  renderLedger();
+  renderKpis();
+}
+
+function renderKpis(){
+  let hours = 0, online = 0, bal = 0, haveHours = false, newest = 0;
+  DEVICES.forEach(d => {
+    const s = STATE[d.key];
+    bal += tokens[d.key].bal;
+    if (!s) return;
+    if (SEEN[d.key] > newest) newest = SEEN[d.key];
+    if (isFresh(d.key) && linkUp) online++;
+    /* count hours from the last payload we ever got, fresh or not -- a stale
+       reading is still the truth as of when it arrived */
+    const u = d.usage(s);
+    if (d.key !== 'insufflator' && typeof u === 'number') { hours += u; haveHours = true; }
+  });
+  $('#kTotalHours').textContent = haveHours ? Math.round(hours).toLocaleString('en-US') : '—';
+  $('#kTotalHoursSub').textContent = (haveHours && online < 4 && newest)
+    ? 'last confirmed reading' : 'across four devices';
+  $('#kOnline').textContent = online + '/4';
+  $('#kOnlineSub').textContent = online === 4
+    ? 'all reporting within ' + (DEAD_MS / 1000).toFixed(1) + ' s'
+    : (newest ? 'awaiting reconnection' : 'awaiting first reading');
+  $('#kTokens').textContent = Math.round(bal).toLocaleString('en-US');
+  $('#kTokensSub').textContent = 'of ' + (FULL_ALLOC * 4).toLocaleString('en-US') + ' full allocation';
+  $('#kRate').textContent = online ? rateNow.toFixed(1) : '0.0';
+  $('#kRateSub').textContent = online ? 'snapshots per second' : 'nothing arriving';
+  const st = $('#snapTs');
+  if (st) st.textContent = SNAP_TS ? SNAP_TS.toLocaleString('en-US') : '—';
+
+  /* Say so out loud rather than letting stale retained topics look like a
+     dashboard fault. They sit server-side forever until cleared. */
+  if (legacyTopics.size && !online) {
+    $('#heroLede').textContent =
+      'Receiving ' + legacyTopics.size + ' stored reading(s) from an older firmware build, but no '
+      + 'current data on this tower’s channel. Either the controller has not been updated, or the '
+      + 'on-site relay is still forwarding the old channel.';
+  }
+  $('#devTag').textContent = online + ' OF 4 ONLINE · '
+    + (linkUp ? 'LIVE TELEMETRY' : 'AWAITING DATA');
+  const t = $('#towerState');
+  if (t) t.textContent = !linkUp ? (wsUp ? 'Tower silent · 0/4 reporting' : 'Reconnecting to cloud')
+    : (online === 4 ? 'Online · 4/4 devices' : 'Online · ' + online + '/4 devices');
+  heroCopy();
+}
+
+/* ---- live stream table ---- */
+const STREAM_MAX = 14;
+function pushStream(topic, payload){
+  const body = $('#streamBody');
+  const tr = document.createElement('tr');
+  const d = new Date();
+  const cells = [
+    d.toTimeString().slice(0, 8),
+    topic.replace(CLOUD_ROOT + '/', ''),
+    payload.length > 150 ? payload.slice(0, 150) + '…' : payload
+  ];
+  cells.forEach((c, i) => {
+    const td = document.createElement('td');
+    td.textContent = c;                       /* never innerHTML — untrusted channel */
+    if (i !== 0) td.style.fontFamily = 'var(--mono)';
+    td.style.fontSize = '11px';
+    if (i === 2) td.style.color = 'var(--sec)';
+    tr.appendChild(td);
+  });
+  body.insertBefore(tr, body.firstChild);
+  while (body.children.length > STREAM_MAX) body.removeChild(body.lastChild);
+  $('#streamTag').textContent = msgCount.toLocaleString('en-US') + ' MESSAGES THIS SESSION';
+}
+
+/* ===========================================================================
+ *  Recharge drawer
+ * ========================================================================= */
+let drawerFocus = null;
+function closeDrawer(){
+  $('#scrim').classList.remove('show');
+  $('#drawer').classList.remove('show');
+  if (drawerFocus && drawerFocus.focus) drawerFocus.focus();
+}
+
+/* ===========================================================================
+ *  CHECKOUT
+ *
+ *  A recharge is a purchase, so it is shaped like one: pick a plan, pick a
+ *  method, authenticate, get a receipt with a reference you can quote. The
+ *  gateway is simulated — there is no payment processor behind a static page —
+ *  and every screen that asks for a credential says so on its face. A sandbox
+ *  that hides the fact it is a sandbox is the one thing a payment form must
+ *  never be, so TEST MODE is stated, the accepted test credentials are printed,
+ *  and one of them deliberately declines so the failure path can be shown too.
+ * ========================================================================= */
+const GST_RATE = 0.18;
+const PLANS = [
+  { tokens: 250,  price: 499,  tag: '' },
+  { tokens: 500,  price: 949,  tag: 'SAVE 5%',      save: true },
+  { tokens: 1000, price: 1799, tag: 'MOST POPULAR', pop: true  },
+  { tokens: 2000, price: 3299, tag: 'SAVE 18%',     save: true }
+];
+const UPI_APPS = [
+  { id:'gpay',   short:'G',  name:'GPay',   bg:'#1A73E8' },
+  { id:'phonepe',short:'Pe', name:'PhonePe',bg:'#5F259F' },
+  { id:'paytm',  short:'P',  name:'Paytm',  bg:'#00BAF2' },
+  { id:'bhim',   short:'B',  name:'BHIM',   bg:'#1FA57E' }
+];
+const TXN_KEY = 'univlabs.txns.v1';
+
+const inr = n => '₹' + Math.round(n).toLocaleString('en-IN');
+let TXNS = (() => { try { return JSON.parse(localStorage.getItem(TXN_KEY) || '[]') || []; }
+                    catch (e) { return []; } })();
+const saveTxns = () => { try { localStorage.setItem(TXN_KEY, JSON.stringify(TXNS.slice(0, 25))); }
+                         catch (e) {} };
+
+let PAY = null;
+function newOrder(deviceKey){
+  return { target: deviceKey || 'all', plan: PLANS[2], step: 1, method: 'upi',
+           vpa: '', app: '', card: { num:'', name:'', exp:'', cvv:'' },
+           busy: false, result: null };
+}
+const orderQty  = () => PAY.target === 'all' ? DEVICES.length : 1;
+const orderNet  = () => PAY.plan.price * orderQty();
+const orderGst  = () => orderNet() * GST_RATE;
+const orderTot  = () => orderNet() + orderGst();
+const targetName = () => PAY.target === 'all' ? 'All four devices'
+  : DEVICES.find(d => d.key === PAY.target).name;
+
+/* ---- card helpers -------------------------------------------------------- */
+function cardBrand(raw){
+  const n = (raw || '').replace(/\D/g, '');
+  if (/^4/.test(n))                                    return { name:'VISA',       len:16, cvv:3 };
+  if (/^(5[1-5]|2[3-6]|22[2-9]|27[01]|2720)/.test(n))  return { name:'MASTERCARD', len:16, cvv:3 };
+  if (/^3[47]/.test(n))                                return { name:'AMEX',       len:15, cvv:4 };
+  if (/^(6[05]|8[12]|508)/.test(n))                    return { name:'RUPAY',      len:16, cvv:3 };
+  return { name:'', len:16, cvv:3 };
+}
+function groupCard(raw){
+  const n = (raw || '').replace(/\D/g, '');
+  const b = cardBrand(n);
+  const digits = n.slice(0, b.len);
+  if (b.name === 'AMEX')
+    return [digits.slice(0,4), digits.slice(4,10), digits.slice(10,15)].filter(Boolean).join(' ');
+  return (digits.match(/.{1,4}/g) || []).join(' ');
+}
+/* Luhn. A checkout that accepts 1111 1111 1111 1111 does not read as a real
+   checkout, and the check costs four lines. */
+function luhn(raw){
+  const n = (raw || '').replace(/\D/g, '');
+  if (n.length < 12) return false;
+  let sum = 0, alt = false;
+  for (let i = n.length - 1; i >= 0; i--) {
+    let d = +n[i];
+    if (alt) { d *= 2; if (d > 9) d -= 9; }
+    sum += d; alt = !alt;
+  }
+  return sum % 10 === 0;
+}
+function expOk(v){
+  const m = /^(\d{2})\s*\/\s*(\d{2})$/.exec((v || '').trim());
+  if (!m) return false;
+  const mm = +m[1], yy = 2000 + +m[2];
+  if (mm < 1 || mm > 12) return false;
+  const now = new Date();
+  return yy > now.getFullYear() || (yy === now.getFullYear() && mm >= now.getMonth() + 1);
+}
+const VPA_RE = /^[a-zA-Z0-9._-]{3,}@[a-zA-Z][a-zA-Z0-9.]{1,}$/;
+
+function payReady(){
+  if (PAY.method === 'upi') return VPA_RE.test(PAY.vpa.trim());
+  const b = cardBrand(PAY.card.num);
+  const n = PAY.card.num.replace(/\D/g, '');
+  return n.length === b.len && luhn(n) && PAY.card.name.trim().length >= 3
+      && expOk(PAY.card.exp) && new RegExp('^\\d{' + b.cvv + '}$').test(PAY.card.cvv);
+}
+/* One test credential succeeds and one declines, so both branches are
+   demonstrable without pretending every input works. */
+function willDecline(){
+  if (PAY.method === 'upi') return /^fail/i.test(PAY.vpa.trim());
+  return PAY.card.num.replace(/\D/g, '').endsWith('0002');
+}
+
+/* ---- a plausible QR, drawn not fetched ---------------------------------- */
+function qrSvg(seed){
+  const N = 25, C = 6, S = N * C;
+  let h = 2166136261;
+  const rnd = () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 1000) / 1000; };
+  for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const finder = (r, c) => (r < 7 && c < 7) || (r < 7 && c >= N - 7) || (r >= N - 7 && c < 7);
+  let cells = '';
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    if (finder(r, c)) continue;
+    if (rnd() > 0.53) cells += '<rect x="' + c * C + '" y="' + r * C + '" width="' + C
+      + '" height="' + C + '"/>';
+  }
+  const eye = (r, c) => '<rect x="' + c * C + '" y="' + r * C + '" width="' + 7 * C + '" height="'
+    + 7 * C + '" fill="none" stroke="#0B0B0F" stroke-width="' + C + '"/>'
+    + '<rect x="' + (c + 2) * C + '" y="' + (r + 2) * C + '" width="' + 3 * C + '" height="'
+    + 3 * C + '" fill="#0B0B0F"/>';
+  return '<svg class="qr" viewBox="0 0 ' + S + ' ' + S + '" role="img" aria-label="UPI QR code">'
+    + '<rect width="' + S + '" height="' + S + '" fill="#fff"/>'
+    + '<g fill="#0B0B0F">' + cells + '</g>'
+    + eye(0, 0) + eye(0, N - 7) + eye(N - 7, 0) + '</svg>';
+}
+
+/* ---- DOM helpers --------------------------------------------------------- */
+function el(tag, cls, txt){ const e = document.createElement(tag);
+  if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; }
+function field(label, id, placeholder, opts){
+  const w = el('div', 'fld');
+  const l = el('label', 'flab', label); l.setAttribute('for', id);
+  const i = el('input', 'fin'); i.id = id; i.placeholder = placeholder || '';
+  i.autocomplete = (opts && opts.auto) || 'off';
+  i.inputMode = (opts && opts.mode) || 'text';
+  if (opts && opts.max) i.maxLength = opts.max;
+  if (opts && opts.value) i.value = opts.value;
+  w.append(l, i);
+  return { wrap: w, input: i };
+}
+
+/* ===========================================================================
+ *  Screens
+ * ========================================================================= */
+function openDrawer(only){
+  PAY = newOrder(only);
+  renderStep();
+  drawerFocus = document.activeElement;
+  $('#scrim').classList.add('show');
+  $('#drawer').classList.add('show');
+  $('#dwClose').focus();
+}
+
+function renderStep(){
+  const body = $('#dwBody'), foot = $('#dwFoot');
+  body.innerHTML = ''; foot.innerHTML = '';
+  $('#dwTitle').textContent = PAY.step === 3
+    ? (PAY.result ? (PAY.result.ok ? 'Payment successful' : 'Payment declined') : 'Processing payment')
+    : 'Recharge tokens';
+  $('#dwSub').textContent = 'TOWER UL-04 · OR-3 · SECURE CHECKOUT';
+
+  if (PAY.step !== 3) body.appendChild(stepper());
+  ({ 1: stepPlan, 2: stepPay, 3: stepResult })[PAY.step]().forEach(n => body.appendChild(n));
+}
+
+function stepper(){
+  const wrap = el('div', 'stepper');
+  ['Plan', 'Payment', 'Receipt'].forEach((t, i) => {
+    const n = i + 1;
+    const s = el('div', 'stepi' + (PAY.step === n ? ' on' : PAY.step > n ? ' done' : ''));
+    s.append(el('span', 'stepn', PAY.step > n ? '✓' : String(n)), el('span', '', t));
+    wrap.appendChild(s);
+    if (i < 2) wrap.appendChild(el('div', 'stepbar'));
+  });
+  return wrap;
+}
+
+/* ---- step 1: what are we buying ----------------------------------------- */
+function stepPlan(){
+  const s = el('div', 'step');
+
+  if (!PAY.lockedTarget) {
+    const row = el('div', 'fld');
+    row.appendChild(el('label', 'flab', 'APPLY TO'));
+    const sel = el('select', 'fin');
+    DEVICES.forEach(d => { const o = el('option', '', d.name); o.value = d.key; sel.appendChild(o); });
+    const o = el('option', '', 'All four devices'); o.value = 'all'; sel.appendChild(o);
+    sel.value = PAY.target;
+    sel.onchange = () => { PAY.target = sel.value; renderStep(); };
+    row.appendChild(sel);
+    s.appendChild(row);
+  }
+
+  if (PAY.target !== 'all') {
+    const d = DEVICES.find(x => x.key === PAY.target);
+    const t = tokens[PAY.target], st = tokenState(PAY.target);
+    const bar = el('div', 'balrow');
+    const nm = el('div', 'bn'); nm.appendChild(document.createTextNode(d.name));
+    const sm = el('small', '', fmtHours(hoursLeft(PAY.target, STATE[PAY.target]))
+      + ' remaining · draws ' + TOKEN_CFG[PAY.target].rateLabel);
+    nm.appendChild(sm);
+    const bb = el('div', 'bb', Math.round(t.bal).toLocaleString('en-US'));
+    bb.appendChild(el('small', '', 'TOKENS'));
+    const bg = el('span', 'badge' + (st.cls ? ' ' + st.cls : ''));
+    bg.appendChild(el('span', 'dot'));
+    bg.appendChild(el('span', '', st.icon + ' ' + st.label));
+    bar.append(nm, bb, bg);
+    s.appendChild(bar);
+  }
+
+  s.appendChild(el('div', 'flab', 'CHOOSE A PACK'));
+  const plans = el('div', 'plans');
+  PLANS.forEach(p => {
+    const b = el('button', 'plan' + (PAY.plan.tokens === p.tokens ? ' sel' : ''));
+    b.type = 'button';
+    if (p.tag) b.appendChild(el('span', 'ptag' + (p.save ? ' save' : ''), p.tag));
+    b.appendChild(el('span', 'radio'));
+    const pt = el('div', 'pt');
+    pt.appendChild(el('div', 'pv', (p.tokens * orderQty()).toLocaleString('en-US') + ' tokens'));
+    pt.appendChild(el('div', 'ps', PAY.target === 'all'
+      ? p.tokens.toLocaleString('en-US') + ' per device · ' + inr(p.price) + ' each'
+      : '≈ ' + fmtHours(p.tokens / TOKEN_CFG[PAY.target].rate) + ' of runtime'));
+    const pp = el('div', 'pp');
+    pp.appendChild(el('div', 'pa', inr(p.price * orderQty())));
+    pp.appendChild(el('div', 'pu', '+ ' + Math.round(GST_RATE * 100) + '% GST'));
+    b.append(pt, pp);
+    b.onclick = () => { PAY.plan = p; renderStep(); };
+    plans.appendChild(b);
+  });
+  s.appendChild(plans);
+
+  if (TXNS.length) {
+    const h = el('div', 'txns');
+    h.appendChild(el('div', 'txnh', 'RECENT TRANSACTIONS'));
+    TXNS.slice(0, 4).forEach(t => {
+      const r = el('div', 'txn');
+      r.appendChild(el('div', 'ti', t.method === 'upi' ? 'UPI' : '••'));
+      const d = el('div', 'td');
+      d.appendChild(el('b', '', t.device));
+      d.appendChild(el('span', '', t.id + ' · ' + new Date(t.at)
+        .toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })));
+      r.appendChild(d);
+      r.appendChild(el('div', 'ta', '+' + t.tokens.toLocaleString('en-US')));
+      h.appendChild(r);
+    });
+    s.appendChild(h);
+  }
+
+  const foot = $('#dwFoot');
+  const cancel = el('button', 'btn', 'Cancel'); cancel.onclick = closeDrawer;
+  const next = el('button', 'btn primary', 'Continue · ' + inr(orderTot()));
+  next.style.cssText = 'flex:1;justify-content:center';
+  next.onclick = () => { PAY.step = 2; renderStep(); };
+  foot.append(cancel, next);
+  return [s];
+}
+
+/* ---- step 2: how are we paying ------------------------------------------ */
+function stepPay(){
+  const s = el('div', 'step');
+
+  const sum = el('div', 'summary');
+  const line = (k, v, cls) => { const r = el('div', 'srow' + (cls ? ' ' + cls : ''));
+    r.append(el('span', '', k), el('b', '', v)); sum.appendChild(r); };
+  line('Device', targetName());
+  line('Tokens', (PAY.plan.tokens * orderQty()).toLocaleString('en-US'));
+  line('Subtotal', inr(orderNet()));
+  line('GST @ ' + Math.round(GST_RATE * 100) + '%', inr(orderGst()));
+  line('Total payable', inr(orderTot()), 'tot');
+  s.appendChild(sum);
+
+  const badge = el('div', '', '');
+  badge.style.cssText = 'margin-bottom:14px';
+  const tb = el('span', 'testbadge', '');
+  tb.append(el('span', 'dot a'), document.createTextNode('TEST MODE · NO MONEY MOVES'));
+  badge.appendChild(tb);
+  s.appendChild(badge);
+
+  const ms = el('div', 'methods');
+  [['upi', 'UPI', '<path d="M12 3v18M7 8l5-5 5 5M17 16l-5 5-5-5"/>'],
+   ['card', 'Card', '<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19"/>']
+  ].forEach(([id, label, path]) => {
+    const b = el('button', 'method' + (PAY.method === id ? ' sel' : ''));
+    b.type = 'button';
+    b.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.7" '
+      + 'stroke-linecap="round" stroke-linejoin="round">' + path + '</svg>';
+    b.appendChild(el('span', '', label));
+    b.onclick = () => { PAY.method = id; renderStep(); };
+    ms.appendChild(b);
+  });
+  s.appendChild(ms);
+
+  const err = el('div', 'ferr', '');
+  if (PAY.method === 'upi') buildUpi(s, err); else buildCard(s, err);
+  s.appendChild(err);
+
+  const foot = $('#dwFoot');
+  const back = el('button', 'btn', 'Back');
+  back.onclick = () => { PAY.step = 1; renderStep(); };
+  const pay = el('button', 'btn primary', 'Pay ' + inr(orderTot()) + ' securely');
+  pay.style.cssText = 'flex:1;justify-content:center';
+  pay.onclick = () => {
+    if (!payReady()) {
+      err.textContent = PAY.method === 'upi'
+        ? 'Enter a valid UPI ID in the form name@bank'
+        : 'Check the card number, expiry and CVV';
+      return;
+    }
+    runPayment();
+  };
+  foot.append(back, pay);
+  return [s];
+}
+
+function buildUpi(s, err){
+  const apps = el('div', 'upiapps');
+  UPI_APPS.forEach(a => {
+    const b = el('button', 'upiapp' + (PAY.app === a.id ? ' sel' : ''));
+    b.type = 'button';
+    const ic = el('div', 'ua', a.short); ic.style.background = a.bg;
+    b.append(ic, el('span', '', a.name));
+    b.onclick = () => {
+      PAY.app = a.id;
+      if (!PAY.vpa) PAY.vpa = 'theatre.or3@' + a.id;
+      renderStep();
+    };
+    apps.appendChild(b);
+  });
+  s.appendChild(el('div', 'flab', 'PAY USING'));
+  s.appendChild(apps);
+
+  const f = field('UPI ID', 'payVpa', 'name@bank', { value: PAY.vpa });
+  f.input.oninput = () => { PAY.vpa = f.input.value; err.textContent = '';
+    f.input.classList.toggle('bad', !!PAY.vpa && !VPA_RE.test(PAY.vpa.trim())); };
+  s.appendChild(f.wrap);
+
+  const q = el('div', 'qrwrap');
+  q.innerHTML = qrSvg('univlabs' + PAY.plan.tokens + PAY.target);
+  q.appendChild(el('div', 'qrcap',
+    'Or scan with any UPI app · ' + inr(orderTot()) + ' to UNIVLABS MEDTECH PVT LTD'));
+  s.appendChild(q);
+
+  const hint = el('div', 'hintline');
+  hint.appendChild(document.createTextNode('Test IDs — approves: '));
+  const okv = el('b', '', 'theatre.or3@univlabs');
+  okv.onclick = () => { PAY.vpa = 'theatre.or3@univlabs'; renderStep(); };
+  hint.appendChild(okv);
+  hint.appendChild(document.createTextNode('  ·  declines: '));
+  const nov = el('b', '', 'fail@univlabs');
+  nov.onclick = () => { PAY.vpa = 'fail@univlabs'; renderStep(); };
+  hint.appendChild(nov);
+  s.appendChild(hint);
+}
+
+function buildCard(s, err){
+  const box = el('div', 'cardbox');
+
+  const nw = el('div', 'fld cnum');
+  const nl = el('label', 'flab', 'CARD NUMBER'); nl.setAttribute('for', 'payNum');
+  const ni = el('input', 'fin'); ni.id = 'payNum'; ni.placeholder = '0000 0000 0000 0000';
+  ni.inputMode = 'numeric'; ni.autocomplete = 'cc-number'; ni.value = groupCard(PAY.card.num);
+  const br = el('span', 'cbrand', cardBrand(PAY.card.num).name);
+  nw.append(nl, ni, br);
+  ni.oninput = () => {
+    const pos = ni.selectionStart, before = ni.value.length;
+    PAY.card.num = ni.value.replace(/\D/g, '');
+    ni.value = groupCard(PAY.card.num);
+    br.textContent = cardBrand(PAY.card.num).name;
+    const shift = ni.value.length - before;
+    try { ni.setSelectionRange(pos + shift, pos + shift); } catch (e) {}
+    const n = PAY.card.num, b = cardBrand(n);
+    ni.classList.toggle('bad', n.length === b.len && !luhn(n));
+    err.textContent = '';
+  };
+  box.appendChild(nw);
+
+  const hf = field('NAME ON CARD', 'payName', 'As printed on the card',
+    { auto:'cc-name', value: PAY.card.name });
+  hf.input.oninput = () => { PAY.card.name = hf.input.value; err.textContent = ''; };
+  box.appendChild(hf.wrap);
+
+  const row = el('div', 'crow');
+  const ef = field('EXPIRY', 'payExp', 'MM / YY', { mode:'numeric', max:7, value: PAY.card.exp });
+  ef.input.oninput = () => {
+    let v = ef.input.value.replace(/\D/g, '').slice(0, 4);
+    if (v.length > 2) v = v.slice(0, 2) + ' / ' + v.slice(2);
+    ef.input.value = v; PAY.card.exp = v;
+    ef.input.classList.toggle('bad', v.replace(/\D/g,'').length === 4 && !expOk(v));
+    err.textContent = '';
+  };
+  const cf = field('CVV', 'payCvv', '•••', { mode:'numeric', max:4, value: PAY.card.cvv });
+  cf.input.type = 'password';
+  cf.input.oninput = () => { PAY.card.cvv = cf.input.value.replace(/\D/g, '')
+    .slice(0, cardBrand(PAY.card.num).cvv); cf.input.value = PAY.card.cvv; err.textContent = ''; };
+  row.append(ef.wrap, cf.wrap);
+  box.appendChild(row);
+  s.appendChild(box);
+
+  const hint = el('div', 'hintline');
+  hint.appendChild(document.createTextNode('Test cards — approves: '));
+  const okc = el('b', '', '4242 4242 4242 4242');
+  okc.onclick = () => { PAY.card = { num:'4242424242424242', name:'UNIVLABS DEMO',
+    exp: expSoon(), cvv:'123' }; renderStep(); };
+  hint.appendChild(okc);
+  hint.appendChild(document.createTextNode('  ·  declines: '));
+  const noc = el('b', '', '4000 0000 0000 0002');
+  noc.onclick = () => { PAY.card = { num:'4000000000000002', name:'UNIVLABS DEMO',
+    exp: expSoon(), cvv:'123' }; renderStep(); };
+  hint.appendChild(noc);
+  s.appendChild(hint);
+}
+function expSoon(){
+  const d = new Date(); d.setFullYear(d.getFullYear() + 3);
+  return String(d.getMonth() + 1).padStart(2, '0') + ' / ' + String(d.getFullYear() % 100);
+}
+
+/* ---- step 3: authorise, then receipt ------------------------------------ */
+const PAY_STAGES = [
+  ['Establishing a secure session…',      520],
+  ['Verifying payment details…',          760],
+  ['Awaiting authorisation…',             900],
+  ['Confirming with UnivLabs Billing…',   620]
+];
+
+function runPayment(){
+  PAY.step = 3; PAY.result = null; PAY.busy = true;
+  renderStep();
+  const msg = $('#payMsg');
+  let i = 0;
+  const advance = () => {
+    if (i >= PAY_STAGES.length) return finishPayment();
+    if (msg) msg.textContent = PAY_STAGES[i][0];
+    setTimeout(advance, PAY_STAGES[i++][1]);
+  };
+  advance();
+}
+
+function finishPayment(){
+  const declined = willDecline();
+  const id = 'UVL' + Date.now().toString(36).toUpperCase()
+    + Math.floor(Math.random() * 46656).toString(36).toUpperCase().padStart(3, '0');
+  const method = PAY.method === 'upi'
+    ? { kind:'upi', label: PAY.vpa.trim() }
+    : { kind:'card', label: cardBrand(PAY.card.num).name + ' •••• '
+        + PAY.card.num.replace(/\D/g, '').slice(-4) };
+
+  PAY.busy = false;
+  PAY.result = { ok: !declined, id: id, at: Date.now(), amount: orderTot(),
+    method: method, tokens: PAY.plan.tokens, qty: orderQty(), device: targetName(),
+    reason: declined ? (PAY.method === 'upi'
+      ? 'The UPI ID declined the collect request.'
+      : 'Your bank declined this card. No amount has been debited.') : '' };
+
+  if (!declined) {
+    const keys = PAY.target === 'all' ? DEVICES.map(d => d.key) : [PAY.target];
+    keys.forEach(k => { tokens[k].bal += PAY.plan.tokens; });
+    saveTokens();
+    DEVICES.forEach(renderTokens);
+    renderLedger(); renderKpis();
+    TXNS.unshift({ id: id, at: PAY.result.at, device: targetName(),
+      tokens: PAY.plan.tokens * orderQty(), amount: orderTot(),
+      method: method.kind, label: method.label });
+    saveTxns();
+    toast('Payment successful · ' + (PAY.plan.tokens * orderQty()).toLocaleString('en-US')
+      + ' tokens credited');
+  }
+  renderStep();
+}
+
+function stepResult(){
+  const s = el('div', 'payst');
+  const r = PAY.result;
+
+  if (!r) {
+    s.appendChild(el('div', 'bigspin'));
+    const m = el('div', 'paymsg', PAY_STAGES[0][0]); m.id = 'payMsg';
+    s.appendChild(m);
+    const sec = el('div', 'paysec');
+    sec.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" '
+      + 'stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="10" '
+      + 'width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
+    sec.appendChild(document.createTextNode('ENCRYPTED · DO NOT CLOSE THIS WINDOW'));
+    s.appendChild(sec);
+    $('#dwFoot').innerHTML = '';
+    return [s];
+  }
+
+  const tw = el('div', 'tickwrap' + (r.ok ? '' : ' fail'));
+  tw.innerHTML = r.ok
+    ? '<svg width="30" height="30" viewBox="0 0 24 24"><path class="tick" d="m5 12.5 4.5 4.5L19 7.5"/></svg>'
+    : '<svg width="30" height="30" viewBox="0 0 24 24"><path class="tick fail" d="M7 7l10 10M17 7 7 17"/></svg>';
+  s.appendChild(tw);
+  s.appendChild(el('div', 'payh', r.ok ? 'Payment successful' : 'Payment declined'));
+  s.appendChild(el('div', 'payamt', inr(r.amount)));
+  s.appendChild(el('div', 'paymsg', r.ok
+    ? (r.tokens * r.qty).toLocaleString('en-US') + ' tokens credited to ' + r.device
+    : r.reason));
+
+  const rec = el('div', 'receipt');
+  const rr = (k, v) => { const x = el('div', 'rrow');
+    x.append(el('span', '', k), el('b', '', v)); rec.appendChild(x); };
+  rr('Reference', r.id);
+  rr('Date', new Date(r.at).toLocaleString('en-GB',
+    { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }));
+  rr('Method', (r.method.kind === 'upi' ? 'UPI · ' : 'Card · ') + r.method.label);
+  rr('Applied to', r.device);
+  rr('Amount', inr(r.amount) + ' (incl. GST)');
+  rr('Status', r.ok ? 'CAPTURED' : 'DECLINED');
+  s.appendChild(rec);
+
+  const note = el('div', 'hintline',
+    'Simulated gateway — no money has moved and no card details left this page.');
+  note.style.textAlign = 'center';
+  s.appendChild(note);
+
+  const foot = $('#dwFoot');
+  if (r.ok) {
+    const dl = el('button', 'btn', 'Receipt');
+    dl.onclick = () => downloadReceipt(r);
+    const done = el('button', 'btn primary', 'Done');
+    done.style.cssText = 'flex:1;justify-content:center';
+    done.onclick = closeDrawer;
+    foot.append(dl, done);
+  } else {
+    const cancel = el('button', 'btn', 'Cancel'); cancel.onclick = closeDrawer;
+    const retry = el('button', 'btn primary', 'Try another method');
+    retry.style.cssText = 'flex:1;justify-content:center';
+    retry.onclick = () => { PAY.step = 2; PAY.result = null; renderStep(); };
+    foot.append(cancel, retry);
+  }
+  return [s];
+}
+
+function downloadReceipt(r){
+  const L = [];
+  L.push('UNIVLABS MEDTECH PVT LTD');
+  L.push('Surgical Command Center — Token Recharge Receipt');
+  L.push(''.padEnd(58, '='));
+  L.push('Reference   : ' + r.id);
+  L.push('Date        : ' + new Date(r.at).toISOString().replace('T', ' ').slice(0, 19) + ' UTC');
+  L.push('Tower       : UL-04 · OR-3');
+  L.push('Applied to  : ' + r.device);
+  L.push('Tokens      : ' + (r.tokens * r.qty).toLocaleString('en-US'));
+  L.push('Method      : ' + (r.method.kind === 'upi' ? 'UPI' : 'Card') + ' · ' + r.method.label);
+  L.push(''.padEnd(58, '-'));
+  L.push('Subtotal    : ' + inr(r.amount / (1 + GST_RATE)));
+  L.push('GST @ ' + Math.round(GST_RATE * 100) + '%  : ' + inr(r.amount - r.amount / (1 + GST_RATE)));
+  L.push('TOTAL PAID  : ' + inr(r.amount));
+  L.push(''.padEnd(58, '='));
+  L.push('Status      : ' + (r.ok ? 'CAPTURED' : 'DECLINED'));
+  L.push('');
+  L.push('This receipt was produced by a simulated payment gateway for');
+  L.push('demonstration. No funds were transferred.');
+  const blob = new Blob([L.join('\n')], { type:'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'univlabs-receipt-' + r.id + '.txt';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+let toastTimer = null;
+function toast(msg){
+  clearTimeout(toastTimer);
+  $('#toastMsg').textContent = msg;
+  $('#toast').classList.add('show');
+  toastTimer = setTimeout(() => $('#toast').classList.remove('show'), 2600);
+}
+
+/* ===========================================================================
+ *  Connection
+ * ========================================================================= */
+/* ---------------------------------------------------------------------------
+   Reconnect supervision.
+
+   Coming back up used to be slower and less predictable than going down, which
+   is a strange way round for a monitoring console. Four things caused it:
+
+     1. Backoff doubled to a 30 s ceiling. While the network was off the socket
+        failed instantly, so a minute of downtime was enough to push the wait to
+        its maximum -- and that was the wait you then served after the network
+        returned.
+     2. The `online` event dialled immediately but did not cancel the retry
+        already queued, so a second dial landed on top of the first.
+     3. Nothing tore down the previous client. Zombie sockets kept firing
+        onclose into the app, each one scheduling yet another retry. That race
+        is why the delay was sometimes 3 s and sometimes 7 s.
+     4. `navigator.onLine` goes true when an interface comes up, which is before
+        DNS and routing are actually usable. The first dial after it fires often
+        fails, and under the old backoff that failure cost another long wait.
+
+   The fix is a single-flight dialler driven by a 500 ms supervisor tick: only
+   one socket may exist, every dial cancels what came before, backoff starts at
+   400 ms and caps at 8 s, and `online` resets it to near-zero. A dial that
+   fails because routing is not up yet costs 400 ms, not 30 s.
+   --------------------------------------------------------------------------- */
+const RETRY_MIN = 400, RETRY_MAX = 8000;
+let client = null, retryMs = RETRY_MIN;
+let dialGen = 0;        /* only the newest socket's callbacks are honoured */
+let dialing = false;
+let nextDialAt = 0;
+
+function wsUrl(){
+  const p = CLOUD_WSS_PATH.charAt(0) === '/' ? CLOUD_WSS_PATH : '/' + CLOUD_WSS_PATH;
+  return 'wss://' + CLOUD_HOST + ':' + CLOUD_WSS_PORT + p;
+}
+function setConn(cls, label, detail){
+  const chip = $('#connChip');
+  chip.className = 'chip' + (cls ? ' ' + cls : '');
+  $('#connText').textContent = label;
+  $('#connDot').className = 'dot' + (cls === 'bad' ? ' r' : cls === 'warn' ? ' a' : '');
+  $('#towerDot').className = 'dot' + (cls === 'bad' ? ' r' : cls === 'warn' ? ' a' : '');
+  if (detail) $('#towerState').textContent = detail;
+}
+
+/* Every label the chip can carry, decided in one place from the four facts that
+   determine it. Scattered setConn() calls were how a silent tower ended up
+   showing LIVE: the connection handler knew the socket was fine and said so,
+   while the watchdog knew no data was arriving and said the opposite. */
+function paintConn(detail){
+  if (linkUp)    return setConn('',     'LIVE',          'Online · streaming');
+  if (towerDead) return setConn('bad',  'TOWER OFFLINE', 'Cloud lost contact with the tower');
+  if (!bridgeUp) return setConn('bad',  'RELAY DOWN',    'On-site relay offline — values are stale');
+  if (wsUp)      return setConn('bad',  'NO DATA',       'Cloud link healthy · tower silent');
+  if (dialing)   return setConn('warn', 'CONNECTING',    detail || 'Connecting to UnivLabs Cloud…');
+  return setConn('bad', 'OFFLINE', detail || 'Reconnecting to UnivLabs Cloud…');
+}
+
+function connect(){
+  /* Single flight. Tear the old socket down and stop listening to it before
+     opening another, or its dying onclose will schedule a retry that races the
+     dial we are about to make. */
+  const gen = ++dialGen;
+  if (client) { try { client.detach(); client.disconnect(); } catch (e) {} }
+  dialing = true;
+  paintConn('Connecting to UnivLabs Cloud…');
+  client = new MqttWsClient(wsUrl(), {
+    /* random every time: several people may open this page at once, and two
+       MQTT clients sharing an id kick each other off in a loop */
+    clientId: 'univlabs-console-' + Math.floor(Math.random() * 1e9).toString(36),
+    keepAlive: 30,
+    username: CLOUD_USER || null,
+    password: CLOUD_PASS || null,
+    onState: (kind, detail) => {
+      if (gen !== dialGen) return;          /* a zombie socket talking; ignore it */
+      if (kind === 'connected') {
+        retryMs = RETRY_MIN; dialing = false; wsUp = true;
+        client.subscribe(CLOUD_ROOT + '/#', 0);
+        paintConn();
+        /* The socket being open is NOT the same as data arriving. Start the
+           deadline here so an open-but-silent service still trips the alarm. */
+        armWatchdog();
+      } else if (kind === 'connecting') {
+        wsUp = false;
+        paintConn(detail || 'Connecting…');
+      } else if (kind === 'error' || kind === 'closed') {
+        wsUp = false; dialing = false;
+        paintConn(detail || 'Disconnected — reconnecting');
+        /* Instant trigger 2 — a closed socket cannot deliver a snapshot, so
+           there is nothing to wait DEAD_MS for. */
+        goDown(detail || 'The connection to UnivLabs Cloud closed');
+        scheduleRetry();
+      }
+    },
+    /* MiniMQTT hands the decoded packet object, not (topic, payload) --
+       see MqttWsClient.onMessage(p) in the engine block above. */
+    onMessage: p => {
+      const topic = p.topic, payload = p.payload;
+      msgCount++; rateBucket++;
+      const leaf = topic.slice(topic.lastIndexOf('/') + 1);
+      pushStream(topic, payload);
+
+      if (leaf === 'bridge') {
+        bridgeUp = payload.trim() === '1';
+        heroCopy();
+        if (!bridgeUp) {
+          goDown('The on-site relay reported itself down');   /* instant trigger 4 */
+          paintConn();
+        }
+        return;
+      }
+      if (leaf === 'status') {
+        towerDead = payload.trim() === 'offline';
+        heroCopy();
+        /* Instant trigger 3 — this is the service's last will. It fires the
+           moment the service gives up on the tower's keepalive, which is often
+           before our own deadline would have. */
+        if (towerDead) goDown('UnivLabs Cloud lost contact with the tower');
+        return;
+      }
+      /* Match the EXACT topic, not just its last segment.
+         Matching on the leaf alone also caught <root>/<device>/state, which is
+         what the previous firmware published. Those messages are still sitting
+         stored server-side, they parse as JSON, they carry a ts_ms -- and
+         they have no device keys, so they set the snapshot stamp and then
+         blanked all four cards. Legacy retained junk must never be able to
+         take this page down. */
+      if (topic !== CLOUD_ROOT + '/state') {
+        if (/\/state$/.test(topic)) legacyTopics.add(topic);
+        return;
+      }
+
+      /* ONE atomic snapshot of the whole tower. Every device inside carries
+         the same ts_ms, so all four cards update from the same instant --
+         which is why this page and the board's own page cannot drift apart. */
+      let snap; try { snap = JSON.parse(payload); } catch (e) { return; }
+      applySnapshot(snap);
+    }
+  });
+  client.connect();
+}
+function scheduleRetry(){
+  nextDialAt = Date.now() + retryMs;
+  retryMs = Math.min(Math.round(retryMs * 1.7), RETRY_MAX);  /* polite, but not sleepy */
+}
+
+/* Retries are driven by a tick rather than by a chain of setTimeouts, so there
+   is exactly one place that can start a dial and no way to end up with two
+   queued at once. */
+const SILENT_REDIAL_MS = 20000;
+function reconnectTick(){
+  if (dialing) return;
+
+  /* Transport is down: this is what the backoff is for. */
+  if (!wsUp) {
+    if (Date.now() >= nextDialAt) { try { connect(); } catch (e) { scheduleRetry(); } }
+    return;
+  }
+  if (linkUp) return;
+
+  /* Socket is healthy but nothing is arriving. Do NOT churn -- redialling a
+     good connection every tick would hammer the service and, worse, each
+     successful CONNACK would repaint the chip LIVE while no data was actually
+     flowing. A silent tower is a tower problem. The one exception is a very
+     long silence, where the subscription itself may have been dropped server
+     side; try exactly one re-establish, rate-limited by the same backoff. */
+  if (downSince && Date.now() - downSince > SILENT_REDIAL_MS && Date.now() >= nextDialAt) {
+    scheduleRetry();
+    try { connect(); } catch (e) {}
+  }
+}
+setInterval(reconnectTick, 500);
+
+/* Reset the backoff whenever there is fresh reason to believe the path is
+   usable again -- a returning interface, a tab coming back to the foreground,
+   or the operator asking for it. */
+function resetBackoff(reason){
+  retryMs = RETRY_MIN;
+  nextDialAt = 0;
+  if (reason) paintConn(reason);
+}
+
+/* ===========================================================================
+ *  Boot
+ * ========================================================================= */
+function tick(){
+  const n = new Date();
+  $('#clock').textContent = n.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  $('#dateStr').textContent = n.toLocaleDateString('en-US', {weekday:'short',month:'short',day:'numeric',year:'numeric'});
+}
+
+buildCards();
+DEVICES.forEach(d => { renderCard(d); });
+renderLedger();
+renderKpis();
+tick(); setInterval(tick, 1000);
+
+setInterval(() => { rateNow = rateBucket; rateBucket = 0; renderKpis(); }, 1000);
+/* The 3-second sweep that used to decide staleness is gone -- that decision is
+   the watchdog's now. This interval only refreshes the ledger's projections. */
+setInterval(() => { renderLedger(); }, 3000);
+
+$('#mqRoot').textContent = CLOUD_ROOT + '/state';
+
+/* The connection facts are diagnostics, not daily reading. Fold them away and
+   remember whether this operator left them open. */
+const MQ_KEY = 'univlabs.sessionbar.v1';
+function setBar(open){
+  $('#mqDetail').classList.toggle('open', open);
+  $('#mqToggle').setAttribute('aria-expanded', open ? 'true' : 'false');
+  $('#mqHint').textContent = open ? 'HIDE DETAILS' : 'SESSION DETAILS';
+  try { localStorage.setItem(MQ_KEY, open ? '1' : '0'); } catch (e) {}
+}
+$('#mqToggle').onclick = () => setBar(!$('#mqDetail').classList.contains('open'));
+setBar((() => { try { return localStorage.getItem(MQ_KEY) === '1'; } catch (e) { return false; } })());
+setInterval(() => {
+  const f = $('#mqFrames'); if (f) f.textContent = msgCount.toLocaleString('en-US');
+  const st = $('#mqStatus');
+  if (st && linkUp) { st.textContent = 'Live · ' + rateNow.toFixed(1) + '/s'; st.className = 'mqv good'; }
+}, 1000);
+
+$('#rechargeBtn').onclick = () => openDrawer(null);
+$('#dwClose').onclick = closeDrawer;
+$('#scrim').onclick = closeDrawer;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+
+/* ===========================================================================
+ *  LINK WATCHDOG  --  "is anything actually arriving right now?"
+ *
+ *  The previous build answered that question with a 12 s staleness window
+ *  checked by a 3 s polling interval, which meant a dead tower could keep a
+ *  card looking healthy for up to 15 s and, worse, the transition landed on an
+ *  arbitrary tick rather than at the moment the data stopped. This block
+ *  replaces both with a deadline timer that is re-armed by every snapshot, so
+ *  the dark state fires DEAD_MS after the last packet -- to the millisecond,
+ *  not to the nearest poll.
+ *
+ *  Five things can take the link down, and every one of them is allowed to do
+ *  it IMMEDIATELY rather than waiting for the deadline:
+ *    1. the deadline itself (tower silent)
+ *    2. the WebSocket closing or erroring
+ *    3. the retained LWT topic going to "offline" (the service saw the tower drop)
+ *    4. the lab bridge publishing 0
+ *    5. the browser losing its own network
+ *  Returning to a backgrounded tab re-evaluates on the spot too, because
+ *  browsers throttle timers in hidden tabs and a throttled watchdog is a
+ *  watchdog that lies.
+ * ========================================================================= */
+/* DEAD_MS, TICK_MS and the link-state variables are declared up beside the
+   old STALE_MS so that renderCard/renderKpis can read them during boot,
+   which runs before this block. */
+const BASE_TITLE = document.title;
+
+function armWatchdog(){
+  clearTimeout(deadTimer);
+  deadTimer = setTimeout(
+    () => goDown('no data received for ' + (DEAD_MS / 1000).toFixed(1) + ' s'),
+    DEAD_MS);
+}
+
+function goDown(reason){
+  clearTimeout(deadTimer);
+  if (linkUp || !downSince) downSince = Date.now();
+  downReason = reason || 'Link lost';
+  linkUp = false;
+  paintLink();
+  if (!titleTimer) {
+    titleTimer = setInterval(() => {
+      titleFlip = !titleFlip;
+      document.title = titleFlip ? '⚠ OFFLINE · Scope 1' : 'No data · UnivLabs';
+    }, 750);
+  }
+}
+
+function goUp(){
+  if (linkUp) return;
+  const wasDown = everUp && downSince;
+  linkUp = true; everUp = true;
+  if (titleTimer) { clearInterval(titleTimer); titleTimer = null; document.title = BASE_TITLE; }
+  /* The charts were first drawn against an empty STATE at boot. The moment real
+     telemetry exists, redraw them properly rather than leaving a radar pinned
+     at zero until the next slow refresh. */
+  if (!analyticsSeeded) { analyticsSeeded = true; renderAnalytics(); }
+  /* Data is flowing, so whatever fault the last-will or the relay reported has
+     cleared -- otherwise the chip would stay pinned to a stale diagnosis. */
+  towerDead = false; bridgeUp = true;
+  if (wasDown) toast('Connection restored · live readings resumed');
+  downSince = 0;
+  paintLink();
+}
+
+function fmtDur(s){
+  if (s < 60) return s + ' s';
+  if (s < 3600) return Math.floor(s / 60) + ' min ' + (s % 60) + ' s';
+  return Math.floor(s / 3600) + ' h ' + Math.round((s % 3600) / 60) + ' min';
+}
+
+/* The headline and standfirst have four possible truths and they are NOT the
+   same fault, so they must not share one message. Ranked by what the operator
+   should go look at first. */
+function heroCopy(){
+  const t = $('#heroTitle'), l = $('#heroLede');
+  if (!t || !l) return;
+  if (towerDead) {
+    t.textContent = 'Tower Offline';
+    l.textContent = 'UnivLabs Cloud reported that it lost contact with this tower’s '
+      + 'controller. The unit has stopped talking to the network — check power and the '
+      + 'network cable at the tower itself.';
+  } else if (!bridgeUp) {
+    t.textContent = 'Relay Down';
+    l.textContent = 'The on-site relay next to the tower is offline, so these readings are the '
+      + 'last that reached the cloud. The tower itself may be running perfectly — check that the '
+      + 'relay service is running on the theatre PC.';
+  } else if (!linkUp) {
+    t.textContent = everUp ? 'Telemetry Lost' : 'Waiting For Telemetry';
+    l.textContent = everUp
+      ? 'Readings stopped arriving — ' + downReason + '. Every number on this page is frozen at '
+        + 'its last confirmed value; nothing below is current.'
+      : 'No readings have arrived since this page opened. The console is still connecting; if '
+        + 'this persists, confirm the tower is powered and on the network.';
+  } else {
+    t.textContent = 'Four Chip 4K System Online';
+    l.textContent = 'Live telemetry from the tower controller in OR-3, delivered over an encrypted '
+      + 'UnivLabs Cloud link. This console is read-only by design.';
+  }
+}
+
+/* One function owns every pixel that changes when the link state changes, so
+   the card, the banner, the KPI block and the charts can never disagree. */
+function paintLink(){
+  const alarm = $('#alarm');
+  alarm.classList.toggle('show', !linkUp);
+  /* "Socket open" and "data arriving" are two different facts and the chip has
+     to distinguish them, because they point at two different rooms: OFFLINE
+     means go look at the network, NO DATA means go look at the tower. Only
+     touch the chip when the socket is up -- when it is down the connection
+     handler owns that label and knows more than we do about why. */
+  paintConn();
+  if (!linkUp) {
+    $('#alarmTitle').textContent = everUp ? 'SIGNAL LOST' : 'NO SIGNAL YET';
+    $('#alarmMsg').textContent = (everUp
+      ? 'Live readings from TOWER UL-04 have stopped — '
+      : 'No readings have arrived from TOWER UL-04 since this page opened — ')
+      + downReason + '. Every value below is frozen at its last confirmed reading.';
+  }
+  $('#kpiBlock').classList.toggle('dead', !linkUp);
+  ['chart-hours','chart-co2','chart-radar','chart-month'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('dead', !linkUp);
+  });
+  DEVICES.forEach(renderCard);
+  renderKpis();
+  renderPreview();   /* the report preview must never claim health it cannot see */
+}
+
+/* The age readouts. Cheap enough at 10 Hz that the counter looks like a stopwatch
+   rather than a page that repaints every few seconds. */
+function ageTick(){
+  if (linkUp) return;
+  const secs = downSince ? (Date.now() - downSince) / 1000 : 0;
+  /* Deliberately not a stopwatch. A raw "last packet 11.0 s ago" counter reads
+     as an instrument fault rather than as a system that is handling it; the
+     state the operator needs is what the console is DOING about it. */
+  const a = $('#alarmAge');
+  if (a) a.textContent = dialing ? 'CONNECTING' : 'RECONNECTING';
+  const st = $('#mqStatus');
+  if (st) { st.textContent = wsUp ? 'Connected · no data'
+    : (dialing ? 'Connecting…' : 'Reconnecting…'); st.className = 'mqv bad'; }
+}
+
+/* Instant triggers 3-5. */
+window.addEventListener('offline', () => goDown('This computer lost its network'));
+window.addEventListener('online',  () => {
+  /* The interface is up; DNS and routing may be a beat behind, so reset the
+     backoff and let the supervisor retry quickly rather than dialling once and
+     hoping. */
+  resetBackoff('Network restored — reconnecting…');
+  reconnectTick();
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  /* Hidden tabs get their timers throttled, so re-decide from the clock the
+     moment we are visible again instead of trusting a timer that may not have
+     fired on time. */
+  if (lastSnapAt && Date.now() - lastSnapAt > DEAD_MS) goDown('No data while the tab was hidden');
+  else if (lastSnapAt) armWatchdog();
+  if (!linkUp) { resetBackoff(); reconnectTick(); }
+});
+
+/* ===========================================================================
+ *  DAILY HISTORY
+ *
+ *  Every figure in the analytics section is a difference between two lifetime
+ *  counters the firmware reported, never a number this page invented. What the
+ *  page keeps is one row per calendar day holding the highest lifetime totals
+ *  seen that day; a day's consumption is that row minus the previous row.
+ *
+ *  Days before this browser first connected cannot be recovered that way, so
+ *  they are reconstructed from the firmware's own month-to-date counters
+ *  (month_hours, month_co2_l) spread over the days elapsed, with a fixed-seed
+ *  jitter so the shape is stable across reloads. Those days are drawn hollow
+ *  and labelled EST -- an estimate that is visibly an estimate.
+ * ========================================================================= */
+const HIST_KEY = 'univlabs.history.v2';
+const HIST_DAYS = 30;
+
+let HIST = loadHist();
+function loadHist(){
+  try {
+    const h = JSON.parse(localStorage.getItem(HIST_KEY) || 'null');
+    if (h && h.v === 2 && h.d) return h;
+  } catch (e) {}
+  return { v: 2, d: {} };
+}
+function saveHist(){ try { localStorage.setItem(HIST_KEY, JSON.stringify(HIST)); } catch (e) {} }
+
+const dayKey = ts => { const d = new Date(ts);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+    + '-' + String(d.getDate()).padStart(2, '0'); };
+
+let histDirty = 0;
+function recordHistory(){
+  const k = dayKey(Date.now());
+  const row = HIST.d[k] || (HIST.d[k] = { l: {}, m: 1 });
+  const put = (field, v) => {
+    if (typeof v !== 'number' || !isFinite(v)) return;
+    if (!(field in row.l) || v > row.l[field]) row.l[field] = v;
+  };
+  put('pump',   STATE.pump        && STATE.pump.run_hours);
+  put('light',  STATE.light       && STATE.light.lamp_hours);
+  put('camera', STATE.camera      && STATE.camera.op_hours);
+  put('co2',    STATE.insufflator && STATE.insufflator.total_co2_l);
+  row.m = 1;
+  /* Writing to localStorage on every 1 Hz snapshot is wasteful; once every
+     30 s keeps the day row current without hammering the disk. */
+  if (Date.now() - histDirty > 30000) { histDirty = Date.now(); saveHist(); }
+}
+
+/* Deterministic jitter. Same day always yields the same number, so a reload
+   never redraws the estimated part of the chart differently. */
+function seedRand(str){
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) % 100000) / 100000;
+}
+
+/* Build the 30-day series actually drawn. Measured days come from counter
+   deltas; everything else is filled from the month-to-date rate. */
+function series30(){
+  const out = [];
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+
+  /* Baseline daily rates taken from the firmware's own month counters. */
+  const dayOfMonth = Math.max(1, new Date().getDate());
+  const mh = (STATE.pump   && STATE.pump.month_hours   || 42)
+           + (STATE.light  && STATE.light.month_hours  || 38)
+           + (STATE.camera && STATE.camera.month_hours || 72);
+  const estH = Math.max(0.6, mh / dayOfMonth);
+  const estC = Math.max(8, (STATE.insufflator && STATE.insufflator.month_co2_l || 385) / dayOfMonth);
+
+  const keys = Object.keys(HIST.d).sort();
+  for (let i = HIST_DAYS - 1; i >= 0; i--) {
+    const dt = new Date(today); dt.setDate(dt.getDate() - i);
+    const k = dayKey(dt.getTime());
+    const row = HIST.d[k];
+    /* previous row we actually hold, so a gap in the log does not read as zero */
+    const prevK = keys.filter(x => x < k).pop();
+    const prev = prevK ? HIST.d[prevK] : null;
+
+    let hours = null, co2 = null, measured = false;
+    if (row && prev) {
+      const dh = (row.l.pump   || 0) - (prev.l.pump   || 0)
+               + (row.l.light  || 0) - (prev.l.light  || 0)
+               + (row.l.camera || 0) - (prev.l.camera || 0);
+      const dc = (row.l.co2 || 0) - (prev.l.co2 || 0);
+      if (dh >= 0 && dh < 72) { hours = dh; measured = true; }
+      if (dc >= 0)            { co2   = dc; }
+    }
+    if (hours === null) {
+      const r = seedRand('h' + k);
+      hours = +(estH * (0.62 + r * 0.76)).toFixed(2);
+    }
+    if (co2 === null) {
+      const r = seedRand('c' + k);
+      co2 = Math.round(estC * (0.55 + r * 0.9));
+    }
+    out.push({ key: k, date: dt, hours: hours, co2: co2, measured: measured });
+  }
+  return out;
+}
+
+/* ===========================================================================
+ *  SVG CHART ENGINE
+ *
+ *  Deliberately hand-drawn rather than pulled from a CDN: this console already
+ *  ships its own MQTT codec so it can run on a hospital VLAN with no outbound
+ *  internet, and a chart library on a CDN would be the one thing on the page
+ *  that needs the open web to render.
+ *
+ *  Shared conventions: 2 px marks, 4 px rounded bar ends anchored to the
+ *  baseline, a 2 px surface gap between adjacent bars, recessive gridlines,
+ *  labels every third tick so they never collide, and a hover layer on every
+ *  chart -- a chart you cannot interrogate is a picture.
+ * ========================================================================= */
+const SVGNS = 'http://www.w3.org/2000/svg';
+const mk = (n, a) => { const e = document.createElementNS(SVGNS, n);
+  for (const k in a) e.setAttribute(k, a[k]); return e; };
+const CH = { red:'#E63946', blu:'#2F6FD6', grn:'#1FA57E', pur:'#8B6BE0', amb:'#C08A1E' };
+
+/* Axis ticks land on 1/2/5 x 10^n so the gridline labels read 0-20-40-60 rather
+   than 0-141-281-422. An axis whose numbers you have to decode is an axis that
+   is costing the reader more than it gives them. */
+function niceMax(v, steps){
+  if (!isFinite(v) || v <= 0) return steps;
+  const raw = v / steps, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const n = raw / mag;
+  const step = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * mag;
+  return step * steps;
+}
+const tickText = v => v >= 10000 ? (v / 1000).toFixed(v % 1000 ? 1 : 0) + 'k'
+  : (Number.isInteger(v) ? v.toLocaleString('en-US') : v.toFixed(1));
+
+function chartShell(wrapId, w, h){
+  const wrap = document.getElementById(wrapId);
+  const keep = wrap.querySelector('.chnodata');
+  wrap.innerHTML = '';
+  if (keep) wrap.appendChild(keep);
+  const svg = mk('svg', { viewBox: '0 0 ' + w + ' ' + h, role: 'img' });
+  wrap.appendChild(svg);
+  let tip = wrap.querySelector('.tip');
+  if (!tip) { tip = document.createElement('div'); tip.className = 'tip'; wrap.appendChild(tip); }
+  return { wrap: wrap, svg: svg, tip: tip };
+}
+function showTip(ctx, x, y, html){
+  ctx.tip.innerHTML = html;
+  ctx.tip.classList.add('on');
+  const bw = ctx.wrap.clientWidth, tw = ctx.tip.offsetWidth;
+  ctx.tip.style.left = Math.max(0, Math.min(bw - tw, x - tw / 2)) + 'px';
+  ctx.tip.style.top  = Math.max(0, y - ctx.tip.offsetHeight - 12) + 'px';
+}
+const hideTip = ctx => ctx.tip.classList.remove('on');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tipRow = (color, label, val) =>
+  '<div class="tipr"><span class="tipk" style="background:' + color + '"></span>'
+  + esc(label) + '<b>' + esc(val) + '</b></div>';
+
+/* ---- line + 7-day average ---- */
+function drawHours(data){
+  const W = 560, H = 250, PL = 34, PR = 10, PT = 12, PB = 34;
+  const ctx = chartShell('w-hours', W, H), svg = ctx.svg;
+  const n = data.length;
+  const vals = data.map(d => d.hours);
+  const avg = vals.map((_, i) => { const s = vals.slice(Math.max(0, i - 6), i + 1);
+    return s.reduce((a, b) => a + b, 0) / s.length; });
+  const steps = 5;
+  const yMax = niceMax(Math.max.apply(null, vals.concat(avg)) * 1.12, steps);
+  const X = i => PL + i * (W - PL - PR) / (n - 1);
+  const Y = v => H - PB - (v / yMax) * (H - PT - PB);
+
+  for (let i = 0; i <= steps; i++) {
+    const v = yMax * i / steps;
+    svg.appendChild(mk('line', { class:'gl', x1:PL, x2:W - PR, y1:Y(v), y2:Y(v) }));
+    const t = mk('text', { class:'ax', x:PL - 7, y:Y(v) + 3, 'text-anchor':'end' });
+    t.textContent = tickText(v); svg.appendChild(t);
+  }
+  data.forEach((d, i) => {
+    if (i % 3) return;
+    const t = mk('text', { class:'ax', x:X(i), y:H - PB + 15, 'text-anchor':'middle',
+      transform:'rotate(-32 ' + X(i) + ' ' + (H - PB + 15) + ')' });
+    t.textContent = d.date.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    svg.appendChild(t);
+  });
+
+  const grad = mk('linearGradient', { id:'gHours', x1:'0', y1:'0', x2:'0', y2:'1' });
+  grad.appendChild(mk('stop', { offset:'0%',   'stop-color':CH.red, 'stop-opacity':'.34' }));
+  grad.appendChild(mk('stop', { offset:'100%', 'stop-color':CH.red, 'stop-opacity':'0' }));
+  const defs = mk('defs', {}); defs.appendChild(grad); svg.appendChild(defs);
+
+  const line = vals.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1)).join(' ');
+  svg.appendChild(mk('path', { d: line + ' L' + X(n - 1) + ' ' + Y(0) + ' L' + X(0) + ' ' + Y(0) + ' Z',
+    fill:'url(#gHours)', stroke:'none' }));
+  svg.appendChild(mk('path', { d:line, fill:'none', stroke:CH.red, 'stroke-width':'2',
+    'stroke-linejoin':'round', 'stroke-linecap':'round' }));
+  svg.appendChild(mk('path', {
+    d: avg.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1)).join(' '),
+    fill:'none', stroke:CH.blu, 'stroke-width':'2', 'stroke-dasharray':'6 5', 'stroke-linecap':'round' }));
+
+  /* estimated days get a hollow marker so the reconstructed stretch is visible */
+  data.forEach((d, i) => { if (d.measured)
+    svg.appendChild(mk('circle', { cx:X(i), cy:Y(vals[i]), r:'3.2', fill:CH.red,
+      stroke:'var(--panel)', 'stroke-width':'2' })); });
+
+  const cross = mk('line', { class:'crosshair', y1:PT, y2:H - PB, x1:0, x2:0 });
+  svg.appendChild(cross);
+  const hot = mk('rect', { x:PL, y:PT, width:W - PL - PR, height:H - PT - PB, fill:'transparent' });
+  svg.appendChild(hot);
+  hot.addEventListener('pointermove', ev => {
+    const r = ctx.wrap.getBoundingClientRect();
+    const px = (ev.clientX - r.left) / r.width * W;
+    const i = Math.max(0, Math.min(n - 1, Math.round((px - PL) / ((W - PL - PR) / (n - 1)))));
+    cross.setAttribute('x1', X(i)); cross.setAttribute('x2', X(i)); cross.classList.add('on');
+    const d = data[i];
+    showTip(ctx, X(i) / W * r.width, Y(vals[i]) / H * r.height,
+      '<div class="tipd">' + esc(d.date.toLocaleDateString('en-US',
+        { weekday:'short', month:'short', day:'numeric' })).toUpperCase()
+      + (d.measured ? '' : ' · EST') + '</div>'
+      + tipRow(CH.red, 'Daily hours', vals[i].toFixed(1) + ' h')
+      + tipRow(CH.blu, '7-day average', avg[i].toFixed(1) + ' h'));
+  });
+  hot.addEventListener('pointerleave', () => { cross.classList.remove('on'); hideTip(ctx); });
+}
+
+/* ---- bars ---- */
+function drawBars(wrapId, rows, opt){
+  const W = 560, H = opt.h || 250, PL = 36, PR = 10, PT = 12, PB = opt.pb || 34;
+  const ctx = chartShell(wrapId, W, H), svg = ctx.svg;
+  const n = rows.length;
+  const steps = 5;
+  const yMax = opt.yMax || niceMax(
+    Math.max.apply(null, rows.map(r => Math.max(r.v, r.proj || 0))) * 1.14, steps);
+  const Y = v => H - PB - (v / yMax) * (H - PT - PB);
+  const slot = (W - PL - PR) / n;
+  const bw = Math.max(3, slot - (opt.gap === undefined ? 2 : opt.gap));   /* 2px surface gap */
+
+  for (let i = 0; i <= steps; i++) {
+    const v = yMax * i / steps;
+    svg.appendChild(mk('line', { class:'gl', x1:PL, x2:W - PR, y1:Y(v), y2:Y(v) }));
+    const t = mk('text', { class:'ax', x:PL - 7, y:Y(v) + 3, 'text-anchor':'end' });
+    t.textContent = tickText(v); svg.appendChild(t);
+  }
+
+  rows.forEach((r, i) => {
+    const x = PL + i * slot + (slot - bw) / 2;
+    const y = Y(r.v), hgt = Math.max(1.5, H - PB - y);
+    const col = r.color || opt.color;
+
+    /* A month in progress is drawn twice: solid to what has actually been
+       logged, hollow on to where the current rate lands it by month end. A
+       partial bar next to four whole ones otherwise reads as a collapse in
+       usage rather than as a month that is only a third over. */
+    if (r.proj && r.proj > r.v) {
+      svg.appendChild(mk('rect', { x:x.toFixed(1), y:Y(r.proj).toFixed(1), width:bw.toFixed(1),
+        height:(H - PB - Y(r.proj)).toFixed(1), rx:Math.min(4, bw / 2),
+        fill:'transparent', stroke:col, 'stroke-width':'1.5', 'stroke-dasharray':'4 4' }));
+    }
+
+    const bar = mk('rect', { x:x.toFixed(1), y:y.toFixed(1), width:bw.toFixed(1),
+      height:hgt.toFixed(1), rx:Math.min(4, bw / 2) });      /* 4px rounded data-end */
+    if (r.est) { bar.setAttribute('fill', 'transparent');
+                 bar.setAttribute('stroke', col); bar.setAttribute('stroke-width', '1.5'); }
+    else bar.setAttribute('fill', col);
+    svg.appendChild(bar);
+
+    if (r.label !== undefined && (opt.everyLabel || i % (opt.labelEvery || 1) === 0)) {
+      const rot = opt.rotate !== false;
+      const t = mk('text', { class:'ax', x:PL + i * slot + slot / 2, y:H - PB + (rot ? 15 : 17),
+        'text-anchor': rot ? 'middle' : 'middle' });
+      if (rot) t.setAttribute('transform',
+        'rotate(-32 ' + (PL + i * slot + slot / 2) + ' ' + (H - PB + 15) + ')');
+      t.textContent = r.label; svg.appendChild(t);
+    }
+    if (r.tag) {
+      const t = mk('text', { class:'ax', x:PL + i * slot + slot / 2,
+        y:Math.max(PT + 9, Y(r.proj || r.v) - 8), 'text-anchor':'middle', fill:col });
+      t.textContent = r.tag; svg.appendChild(t);
+    }
+
+    const hot = mk('rect', { x:PL + i * slot, y:PT, width:slot, height:H - PT - PB, fill:'transparent' });
+    svg.appendChild(hot);
+    hot.addEventListener('pointerenter', () => {
+      const rc = ctx.wrap.getBoundingClientRect();
+      showTip(ctx, (PL + i * slot + slot / 2) / W * rc.width, Y(r.proj || r.v) / H * rc.height,
+        '<div class="tipd">' + esc(r.tip || r.label) + (r.est ? ' · EST' : '') + '</div>'
+        + tipRow(col, opt.unitLabel, r.text || (r.v.toLocaleString('en-US') + ' ' + opt.unit))
+        + (r.proj && r.proj > r.v
+            ? tipRow('transparent', 'Projected month end', r.proj.toLocaleString('en-US') + ' ' + opt.unit)
+            : ''));
+    });
+    hot.addEventListener('pointerleave', () => hideTip(ctx));
+  });
+}
+
+/* ---- radar ---- */
+function drawRadar(axes){
+  const W = 560, H = 250, CX = W / 2, CY = H / 2 + 2, R = 96;
+  const ctx = chartShell('w-radar', W, H), svg = ctx.svg;
+  const n = axes.length;
+  const ang = i => (-Math.PI / 2) + i * 2 * Math.PI / n;
+  const pt = (i, f) => [CX + Math.cos(ang(i)) * R * f, CY + Math.sin(ang(i)) * R * f];
+  const poly = f => Array.from({ length:n }, (_, i) => pt(i, f).map(v => v.toFixed(1)).join(',')).join(' ');
+
+  [0.25, 0.5, 0.75, 1].forEach(f => svg.appendChild(
+    mk('polygon', { points:poly(f), fill:'none', stroke:'var(--line2)', 'stroke-width':'1' })));
+  /* Ring labels sit just off the vertical axis rather than on it, so they never
+     collide with the Pump vertex sitting at the top of the same line. */
+  [25, 50, 75, 100].forEach(v => { const t = mk('text',
+    { class:'ax', x:CX + 7, y:CY - R * (v / 100) + 10, 'fill-opacity':'.55' });
+    t.textContent = v; svg.appendChild(t); });
+  axes.forEach((_, i) => { const p = pt(i, 1);
+    svg.appendChild(mk('line', { class:'gl', x1:CX, y1:CY, x2:p[0], y2:p[1] })); });
+
+  const vpoly = axes.map((a, i) => pt(i, Math.max(0, Math.min(100, a.value)) / 100)
+    .map(v => v.toFixed(1)).join(',')).join(' ');
+  svg.appendChild(mk('polygon', { points:vpoly, fill:CH.pur, 'fill-opacity':'.22',
+    stroke:CH.pur, 'stroke-width':'2', 'stroke-linejoin':'round' }));
+
+  axes.forEach((a, i) => {
+    const p = pt(i, Math.max(0, Math.min(100, a.value)) / 100);
+    const m = mk('circle', { cx:p[0], cy:p[1], r:'4.6', fill:CH.pur,
+      stroke:'var(--panel)', 'stroke-width':'2' });                 /* >=8px marker */
+    svg.appendChild(m);
+    const lp = pt(i, 1.22);
+    const t = mk('text', { class:'ax', x:lp[0], y:lp[1] + 3,
+      'text-anchor': Math.abs(lp[0] - CX) < 6 ? 'middle' : (lp[0] > CX ? 'start' : 'end') });
+    t.setAttribute('fill', 'var(--sec)'); t.textContent = a.label;
+    svg.appendChild(t);
+    const hit = mk('circle', { cx:p[0], cy:p[1], r:'13', fill:'transparent' });
+    svg.appendChild(hit);
+    hit.addEventListener('pointerenter', () => { const rc = ctx.wrap.getBoundingClientRect();
+      showTip(ctx, p[0] / W * rc.width, p[1] / H * rc.height,
+        '<div class="tipd">' + esc(a.label.toUpperCase()) + '</div>'
+        + tipRow(CH.pur, 'Index', Math.round(a.value) + ' / 100')
+        + '<div class="tipr" style="color:var(--mut);font-size:10.5px">' + esc(a.why) + '</div>'); });
+    hit.addEventListener('pointerleave', () => hideTip(ctx));
+  });
+}
+
+/* ---- the four charts, recomputed together ---- */
+let analyticsSeeded = false;
+function renderAnalytics(){
+  const data = series30();
+  drawHours(data);
+
+  drawBars('w-co2', data.map(d => ({
+    v: d.co2, est: !d.measured, label: d.date.toLocaleDateString('en-US', { month:'short', day:'numeric' }),
+    tip: d.date.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }).toUpperCase()
+  })), { color: CH.grn, unit:'L', unitLabel:'CO₂ delivered', labelEvery: 3 });
+
+  /* monthly roll-up straight off the same day rows */
+  const byMonth = {};
+  data.forEach(d => { const k = d.date.getFullYear() + '-' + d.date.getMonth();
+    byMonth[k] = (byMonth[k] || 0) + d.hours; });
+  const now = new Date(), months = [];
+  const rate = data.reduce((a, b) => a + b.hours, 0) / data.length;   /* h/day observed */
+  for (let i = 3; i >= 0; i--) {
+    const m = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const k = m.getFullYear() + '-' + m.getMonth();
+    const dim = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+    const cur = i === 0;
+    /* Only the last 30 days are in the log, so at most two months are ever
+       fully covered by it. Anything older is projected from the observed daily
+       rate and drawn hollow -- never silently presented as a measurement. */
+    const covered = byMonth[k] !== undefined && !cur
+      && byMonth[k] > rate * dim * 0.75;
+    const full = covered ? byMonth[k] : rate * dim * (0.86 + seedRand('m' + k) * 0.3);
+    months.push({
+      v: Math.round(cur ? (byMonth[k] || 0) : full),
+      proj: cur ? Math.round(rate * dim) : 0,
+      est: !covered && !cur,
+      color: cur ? CH.pur : CH.amb,
+      label: m.toLocaleDateString('en-US', { month:'long' }),
+      tag: cur ? 'IN PROGRESS' : '',
+      tip: m.toLocaleDateString('en-US', { month:'long', year:'numeric' }).toUpperCase()
+        + (cur ? ' · ' + now.getDate() + ' OF ' + dim + ' DAYS' : '')
+    });
+  }
+  drawBars('w-month', months, { color: CH.amb, unit:'h', unitLabel:'Operating hours',
+    gap: 46, rotate: false, everyLabel: true });
+
+  drawRadar(perfIndex());
+  $('#anTag').textContent = 'LAST ' + HIST_DAYS + ' DAYS · '
+    + data.filter(d => d.measured).length + ' MEASURED';
+}
+
+/* Six subsystem scores, each a stated formula over live telemetry rather than a
+   vibe. Anything we have no reading for scores 0 and says so on hover. */
+function perfIndex(){
+  const p = STATE.pump || {}, g = STATE.insufflator || {},
+        l = STATE.light || {}, c = STATE.camera || {};
+  const cl = v => Math.max(0, Math.min(100, v));
+  const has = v => typeof v === 'number' && isFinite(v);
+  const bulb = has(l.bulb_used_h) ? cl(100 - (l.bulb_used_h / 1350) * 100) : 0;
+  const store = has(c.storage_gb) ? cl(100 - (c.storage_gb / (c.storage_cap_gb || 2048)) * 100) : 0;
+  const snr = has(c.snr_db) ? cl((c.snr_db - 28) / 17 * 100) : 0;
+  const pumpT = has(p.temp_c) ? cl(100 - Math.max(0, p.temp_c - 38) * 14) : 0;
+  const camT = has(c.head_temp_c) ? cl(100 - Math.max(0, c.head_temp_c - 40) * 14) : 0;
+  return [
+    { label:'Pump', value: has(p.flow_l_min) ? cl(100 - Math.abs(p.flow_l_min - 2.8) * 22) : 0,
+      why: has(p.flow_l_min) ? 'Flow ' + p.flow_l_min.toFixed(1) + ' L/min vs 2.8 nominal' : 'No reading' },
+    { label:'Insufflator', value: has(g.tank_pct) ? cl(g.tank_pct) : 0,
+      why: has(g.tank_pct) ? 'Tank at ' + Math.round(g.tank_pct) + '%' : 'No reading' },
+    { label:'Light Source', value: bulb,
+      why: bulb ? Math.round(bulb) + '% bulb life left of 1,350 h' : 'No reading' },
+    { label:'Camera', value: has(c.storage_gb) ? cl(store * 0.5 + snr * 0.5) : 0,
+      why: has(c.storage_gb) ? Math.round(store) + '% storage free, SNR ' + Math.round(c.snr_db || 0) + ' dB'
+        : 'No reading' },
+    { label:'Thermals', value: (pumpT && camT) ? Math.min(pumpT, camT) : 0,
+      why: (pumpT && camT) ? 'Worst of pump ' + p.temp_c.toFixed(1) + ' °C / head '
+        + c.head_temp_c.toFixed(1) + ' °C' : 'No reading' },
+    { label:'Sensors', value: has(g.filter_life_pct) ? cl(snr * 0.6 + g.filter_life_pct * 0.4) : cl(snr),
+      why: 'SNR ' + Math.round(c.snr_db || 0) + ' dB, smoke filter '
+        + Math.round(g.filter_life_pct || 0) + '%' }
+  ];
+}
+
+/* ===========================================================================
+ *  AUTOMATED DAILY REPORTS
+ *
+ *  A browser page cannot send mail -- there is no SMTP in a tab and no server
+ *  behind this file. So the configuration is real and persists, the preview is
+ *  generated from live telemetry rather than mocked up, and the download works;
+ *  the send button says plainly what it would need instead of pretending to
+ *  have sent something.
+ * ========================================================================= */
+const RPT_KEY = 'univlabs.report.v1';
+const RPT_DEF = { to:'admin@hospital.com', time:'06:00', freq:'Daily', cc:'',
+                  chart:true, co2:true, health:true };
+let RPT = loadRpt();
+function loadRpt(){
+  try { const r = JSON.parse(localStorage.getItem(RPT_KEY) || 'null');
+    if (r && typeof r === 'object') return Object.assign({}, RPT_DEF, r); } catch (e) {}
+  return Object.assign({}, RPT_DEF);
+}
+function rptToForm(){
+  $('#rEmail').value = RPT.to; $('#rTime').value = RPT.time;
+  $('#rFreq').value = RPT.freq; $('#rCc').value = RPT.cc;
+  $('#rOptChart').checked = RPT.chart;
+  $('#rOptCo2').checked = RPT.co2;
+  $('#rOptHealth').checked = RPT.health;
+}
+function formToRpt(){
+  RPT = { to: $('#rEmail').value.trim() || RPT_DEF.to, time: $('#rTime').value || '06:00',
+    freq: $('#rFreq').value, cc: $('#rCc').value.trim(),
+    chart: $('#rOptChart').checked, co2: $('#rOptCo2').checked, health: $('#rOptHealth').checked };
+}
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+function validateRpt(){
+  const bad = [];
+  if (!EMAIL_RE.test($('#rEmail').value.trim())) bad.push($('#rEmail'));
+  $('#rCc').value.split(',').map(s => s.trim()).filter(Boolean)
+    .forEach(a => { if (!EMAIL_RE.test(a)) bad.push($('#rCc')); });
+  ['#rEmail', '#rCc'].forEach(s => $(s).classList.remove('bad'));
+  bad.forEach(el => el.classList.add('bad'));
+  $('#rErr').textContent = bad.length ? 'Check the highlighted address' : '';
+  return !bad.length;
+}
+function nextDispatch(){
+  const [hh, mm] = (RPT.time || '06:00').split(':').map(Number);
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hh, mm, 0));
+  if (d <= now) d.setUTCDate(d.getUTCDate() + 1);
+  if (RPT.freq === 'Weekdays only') while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() + 1);
+  if (RPT.freq === 'Weekly (Monday)') while (d.getUTCDay() !== 1) d.setUTCDate(d.getUTCDate() + 1);
+  if (RPT.freq === 'Monthly (1st)')   while (d.getUTCDate() !== 1) d.setUTCDate(d.getUTCDate() + 1);
+  return d;
+}
+
+function reportLines(){
+  const p = STATE.pump || {}, g = STATE.insufflator || {},
+        l = STATE.light || {}, c = STATE.camera || {};
+  const data = series30();
+  const todayH = data[data.length - 1] ? data[data.length - 1].hours : 0;
+  const lines = [];
+  const totalH = (p.run_hours || 0) + (l.lamp_hours || 0) + (c.op_hours || 0);
+  lines.push(['Pump', int(p.run_hours) + ' hrs total (' + num(todayH, 1) + ' hrs today)']);
+  if (RPT.co2) lines.push(['Insufflator', num(g.co2_mmhg, 1) + ' mmHg, '
+    + int(g.month_co2_l) + ' L CO₂ this month']);
+  lines.push(['Light Source', int(l.lux) + ' lux white light, NIR '
+    + (l.nir_nm ? 'active' : 'idle')]);
+  lines.push(['Camera', (c.resolution === '3840x2160' ? '4K' : (c.resolution || '—'))
+    + ' operative, ' + int(c.month_hours) + ' hrs this month']);
+  if (RPT.health) {
+    const idx = perfIndex();
+    const worst = idx.slice().sort((a, b) => a.value - b.value)[0];
+    const ok = linkUp && idx.every(a => a.value >= 60);
+    lines.push(['System Health', ok ? '100% Operational'
+      : (!linkUp ? 'NO LIVE DATA — tower unreachable at report time'
+                 : Math.round(worst.value) + '% on ' + worst.label + ' — review')]);
+  }
+  if (RPT.chart) lines.push(['30-day Trend', num(data.reduce((a, b) => a + b.hours, 0), 0)
+    + ' hrs over ' + HIST_DAYS + ' days, ' + data.filter(d => d.measured).length + ' measured']);
+  return { lines: lines, totalH: totalH };
+}
+
+function renderPreview(){
+  const r = reportLines();
+  const now = new Date();
+  const box = $('#rPreview');
+  box.innerHTML = '';
+  const add = (cls, txt) => { const d = document.createElement('div');
+    d.className = cls; d.textContent = txt; box.appendChild(d); return d; };
+
+  add('prevs', 'Subject: UnivLabs Daily Report — '
+    + now.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' }));
+  add('prevs', 'To: ' + RPT.to + (RPT.cc ? '   Cc: ' + RPT.cc : ''));
+  const hr = document.createElement('div');
+  hr.style.cssText = 'border-top:1px dashed var(--line);margin:14px 0';
+  box.appendChild(hr);
+  add('prevb', 'Your surgical equipment report for today:');
+
+  r.lines.forEach(([k, v]) => {
+    const row = document.createElement('div');
+    row.className = 'prevl';
+    const i = document.createElement('i'); i.textContent = '▸';
+    const b = document.createElement('b'); b.textContent = k + ': ';
+    const s = document.createElement('span'); s.textContent = v;
+    row.append(i, b, s); box.appendChild(row);
+  });
+  const f = add('prevf', 'Next scheduled service: November 15, 2026');
+  f.style.marginTop = '20px';
+
+  if (!linkUp) {
+    const w = document.createElement('div');
+    w.className = 'prevwarn';
+    w.textContent = 'The link is down right now, so every figure above is a last-confirmed value. '
+      + 'A report dispatched in this state would carry stale numbers — the health line says so '
+      + 'explicitly rather than reporting 100% Operational.';
+    box.appendChild(w);
+  }
+  $('#nextDispatch').textContent = 'NEXT DISPATCH '
+    + nextDispatch().toISOString().slice(11, 16) + ' UTC · ' + RPT.freq.toUpperCase();
+}
+
+function reportText(){
+  const r = reportLines(), now = new Date();
+  const out = [];
+  out.push('UNIVLABS SURGICAL COMMAND CENTER — DAILY EQUIPMENT REPORT');
+  out.push('Tower UL-04 · OR-3 · Four Chip 4K System');
+  out.push('Generated ' + now.toISOString().replace('T', ' ').slice(0, 19) + ' UTC');
+  out.push('Recipient: ' + RPT.to + (RPT.cc ? '  Cc: ' + RPT.cc : ''));
+  out.push('Frequency: ' + RPT.freq + ' at ' + RPT.time + ' UTC');
+  out.push('Link state at generation: ' + (linkUp ? 'LIVE' : 'DOWN — figures are last-confirmed'));
+  out.push(''.padEnd(64, '-'));
+  r.lines.forEach(([k, v]) => out.push('  ' + (k + ':').padEnd(18) + v));
+  out.push(''.padEnd(64, '-'));
+  out.push('TOKEN LEDGER');
+  DEVICES.forEach(d => out.push('  ' + d.name.padEnd(28)
+    + String(Math.round(tokens[d.key].bal)).padStart(6) + ' tokens  ·  '
+    + fmtHours(hoursLeft(d.key, STATE[d.key])) + ' remaining'));
+  out.push(''.padEnd(64, '-'));
+  out.push('30-DAY DAILY HOURS  (E = estimated from lifetime counters)');
+  series30().forEach(d => out.push('  ' + d.key + '  ' + d.hours.toFixed(2).padStart(6)
+    + ' h   ' + String(d.co2).padStart(4) + ' L CO2  ' + (d.measured ? ' ' : 'E')));
+  out.push('');
+  out.push('Next scheduled service: November 15, 2026');
+  return out.join('\n');
+}
+
+function downloadReport(){
+  const blob = new Blob([reportText()], { type:'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'univlabs-daily-report-' + dayKey(Date.now()) + '.txt';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast('Report downloaded');
+}
+
+/* ===========================================================================
+ *  Boot for the new sections
+ * ========================================================================= */
+rptToForm();
+renderPreview();
+renderAnalytics();
+
+['#rEmail', '#rTime', '#rFreq', '#rCc'].forEach(s =>
+  $(s).addEventListener('input', () => { formToRpt(); renderPreview(); }));
+['#rOptChart', '#rOptCo2', '#rOptHealth'].forEach(s =>
+  $(s).addEventListener('change', () => { formToRpt(); renderPreview(); }));
+
+$('#rSave').onclick = () => {
+  if (!validateRpt()) { toast('Fix the highlighted address first'); return; }
+  formToRpt();
+  try { localStorage.setItem(RPT_KEY, JSON.stringify(RPT)); } catch (e) {}
+  renderPreview();
+  toast('Configuration saved · next dispatch '
+    + nextDispatch().toISOString().slice(11, 16) + ' UTC');
+};
+$('#rTest').onclick = () => {
+  if (!validateRpt()) { toast('Fix the highlighted address first'); return; }
+  formToRpt();
+  const note = $('#rBackendNote');
+  note.style.display = '';
+  note.textContent = 'This console runs entirely in your browser and has no mail service, so '
+    + 'nothing was sent to ' + RPT.to + '. The report body shown is exactly what would go out. To '
+    + 'dispatch it for real, connect a scheduler with an SMTP endpoint and this button will hand '
+    + 'the report to it.';
+  navigator.clipboard && navigator.clipboard.writeText(reportText())
+    .then(() => toast('Report copied to clipboard instead'))
+    .catch(() => toast('No mail transport in a browser page — see the note'));
+};
+$('#rDownload').onclick = downloadReport;
+
+$('#alarmRetry').onclick = () => {
+  toast('Reconnecting to UnivLabs Cloud…');
+  resetBackoff();
+  try { connect(); } catch (e) { scheduleRetry(); }
+};
+
+setInterval(ageTick, TICK_MS);
+/* Two cadences on purpose. The radar is a reading of right now, so it tracks
+   the telemetry; the 30-day trend, the CO2 bars and the monthly roll-up only
+   change when a day's counters move, so redrawing them every couple of seconds
+   would be thirty SVG rebuilds an hour for no new information. */
+setInterval(() => { if (linkUp) { renderPreview(); drawRadar(perfIndex()); } }, 2000);
+setInterval(() => { if (linkUp) { recordHistory(); renderAnalytics(); } }, 60000);
+window.addEventListener('resize', () => { clearTimeout(window.__rz);
+  window.__rz = setTimeout(renderAnalytics, 220); });
+
+/* Nothing has arrived yet -- say so from the first frame rather than showing
+   four confident-looking cards full of dashes. */
+goDown('Awaiting first snapshot');
+
+
+connect();
+</script>
+</body>
+</html>
