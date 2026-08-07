@@ -402,10 +402,11 @@ select.fin{font-family:'Sora',sans-serif;cursor:pointer}
 
 
 /* ===========================================================================
-   v3.2 — COLLAPSIBLE SESSION BAR
+   v3.3 — COLLAPSIBLE SESSION BAR
    The connection facts are diagnostics, not something a theatre lead needs in
    their eyeline every shift. Title stays, the rest folds away behind a
-   disclosure that remembers whether it was left open.
+   disclosure that remembers whether it was left open. Product language only —
+   no hostnames, no protocol jargon on the surface.
    =========================================================================== */
 .mqbar{padding:0 32px}
 @media(max-width:900px){.mqbar{padding:0 18px}}
@@ -616,11 +617,11 @@ select.fin{font-family:'Sora',sans-serif;cursor:pointer}
 <div class="mqdetail" id="mqDetail">
   <div class="mqgrid">
     <div class="mqcell"><span class="mql">SERVICE</span><span class="mqv">UnivLabs Cloud</span></div>
-    <div class="mqcell"><span class="mql">DEVICE CHANNEL</span><span class="mqv" id="mqRoot">—</span></div>
-    <div class="mqcell"><span class="mql">LINK</span><span class="mqv">Secure WebSocket · TLS</span></div>
+    <div class="mqcell"><span class="mql">SITE</span><span class="mqv" id="mqRoot">Tower UL-04 · Scope 1</span></div>
+    <div class="mqcell"><span class="mql">LINK</span><span class="mqv">Encrypted cloud link</span></div>
     <div class="mqcell"><span class="mql">CONNECTION</span><span class="mqv" id="mqStatus">—</span></div>
-    <div class="mqcell"><span class="mql">SNAPSHOT</span><span class="mqv" id="snapTs">—</span></div>
-    <div class="mqcell"><span class="mql">SESSION FRAMES</span><span class="mqv" id="mqFrames">0</span></div>
+    <div class="mqcell"><span class="mql">LAST UPDATE</span><span class="mqv" id="snapTs">—</span></div>
+    <div class="mqcell"><span class="mql">FRAMES RECEIVED</span><span class="mqv" id="mqFrames">0</span></div>
   </div>
 </div>
 <header class="top">
@@ -662,7 +663,7 @@ select.fin{font-family:'Sora',sans-serif;cursor:pointer}
 <section id="devices">
   <div class="shead">
     <h2>Active Devices</h2>
-    <span class="stag" id="devTag">4 OF 4 ONLINE · LIVE MQTT</span>
+    <span class="stag" id="devTag">4 OF 4 ONLINE · LIVE</span>
   </div>
   <div class="grid" id="deviceGrid">
     <article class="card" id="card-pump">
@@ -902,20 +903,20 @@ select.fin{font-family:'Sora',sans-serif;cursor:pointer}
 <section id="stream">
   <div class="shead">
     <h2>Live Stream</h2>
-    <span class="stag" id="streamTag">307 MESSAGES THIS SESSION</span>
+    <span class="stag" id="streamTag">0 READINGS THIS SESSION</span>
   </div>
-  <p class="lede">Raw telemetry frames exactly as they arrive from the tower. Useful for confirming
-  the unit is still reporting when a card looks stale.</p>
+  <p class="lede">Live readings as they arrive from the tower. Useful for confirming
+  the unit is still reporting when a card looks offline.</p>
   <table class="tbl">
-    <thead><tr><th style="width:78px">TIME</th><th style="width:34%">TOPIC</th><th>PAYLOAD</th></tr></thead>
-    <tbody id="streamBody"><tr><td style="font-size: 11px;">09:32:43</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":340030,"uptime_s":340,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:43</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":339030,"uptime_s":339,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:42</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":338030,"uptime_s":338,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:41</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":337030,"uptime_s":337,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:39</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":336030,"uptime_s":336,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:38</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":335030,"uptime_s":335,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:38</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":334030,"uptime_s":334,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:36</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":333030,"uptime_s":333,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:36</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":332030,"uptime_s":332,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:34</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":331030,"uptime_s":331,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:34</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":330030,"uptime_s":330,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:33</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":329030,"uptime_s":329,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:31</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":328030,"uptime_s":328,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr><tr><td style="font-size: 11px;">09:32:31</td><td style="font-family: var(--mono); font-size: 11px;">state</td><td style="font-family: var(--mono); font-size: 11px; color: var(--sec);">{"ts_ms":327030,"uptime_s":327,"state":"CONNECTED","client_id":"univlabs-stm32f429-01","topic_root":"univlabs-f041248e/scope1","pump":{"device":"pump"…</td></tr></tbody>
+    <thead><tr><th style="width:78px">TIME</th><th style="width:22%">SOURCE</th><th>READING</th></tr></thead>
+    <tbody id="streamBody"></tbody>
   </table>
 </section>
 
 </div>
 
 <footer>
-  <div>© 2026 UnivLabs. World is more beautiful when we care for all. · Surgical Command Center v3.2</div>
+  <div>© 2026 UnivLabs. World is more beautiful when we care for all. · Surgical Command Center v3.3</div>
   <div class="fl"><a href="#overview">Overview</a><a href="#devices">Devices</a><a href="#tokens">Tokens</a><a href="tel:+18002035113" style="font-family:var(--mono)">1-800-203-5113</a></div>
 </footer>
 </main>
@@ -946,10 +947,14 @@ const TE = new TextEncoder();
 const TD = new TextDecoder('utf-8', { fatal: false });
 const PKT = { CONNECT:1, CONNACK:2, PUBLISH:3, PUBACK:4, SUBSCRIBE:8, SUBACK:9,
               PINGREQ:12, PINGRESP:13, DISCONNECT:14 };
+/* User-facing only — never leak protocol jargon into the chip or alarm bar. */
 const CONNACK_TEXT = {
-  0:'Accepted', 1:'Refused: unsupported protocol version', 2:'Refused: session id rejected',
-  3:'Refused: service unavailable', 4:'Refused: credentials rejected',
-  5:'Refused: this session is not authorised'
+  0:'Connected',
+  1:'Cloud service rejected the session',
+  2:'Cloud service rejected the session',
+  3:'Cloud service is temporarily unavailable',
+  4:'Cloud credentials were rejected',
+  5:'This session is not authorised'
 };
 
 function encodeVarint(n) {
@@ -1063,12 +1068,15 @@ class MqttWsClient {
     /* Guard: a WebSocket aimed at a host that never answers can hang for ~30 s
        with no feedback at all. Fail fast and say why, the same way the firmware
        uses MQTT_CONNECT_GUARD_MS. */
+    /* Fail fast on a silent host so recovery after a network flap does not sit
+       on a dead socket for half a minute. 2.8 s is enough for TLS + auth on
+       a healthy path; anything longer is treated as a failed attempt. */
     this.guard = setTimeout(() => {
       if (!this.connected) {
         this.onState('error', 'The connection attempt timed out');
         try { ws.close(); } catch (e) {}
       }
-    }, 4500);
+    }, 2800);
 
     ws.onopen = () => {
       this.onState('connecting', 'Secure channel open — authenticating…');
@@ -1085,12 +1093,12 @@ class MqttWsClient {
           if (p.returnCode === 0) {
             this.connected = true;
             clearTimeout(this.guard);
-            this.onState('connected', 'CONNACK accepted');
+            this.onState('connected', 'Connected to UnivLabs Cloud');
             this.pingTimer = setInterval(() => {
               if (ws.readyState === 1) ws.send(buildPingReq());
             }, Math.max(5, this.keepAlive / 2) * 1000);
           } else {
-            this.onState('error', CONNACK_TEXT[p.returnCode] || ('CONNACK rc=' + p.returnCode));
+            this.onState('error', CONNACK_TEXT[p.returnCode] || 'Cloud service rejected the session');
             ws.close();
           }
         } else if (p.name === 'PUBLISH') {
@@ -1174,7 +1182,17 @@ const PAGES_URL      = '';
    OS dropping the network -- skips the deadline and takes the link down on the
    spot.
    --------------------------------------------------------------------------- */
-const DEAD_MS = 1500;   /* ~1.5 missed snapshots at the firmware's 1 Hz rate */
+/* Silence budget before the UI may go dark. The tower aims for ~1 Hz, but
+   under real networks gaps of 2–3 s are common. A 1.5 s window treated those
+   gaps as a full outage (LIVE → OFFLINE → LIVE for about a second). 3.5 s
+   covers a couple of missed beats without making a real disconnect feel lazy. */
+const DEAD_MS = 3500;   /* 3.5 s silence before dark state */
+/* Going UP needs hysteresis too. A single retained/orphan frame during
+   reconnect used to call goUp() and flash LIVE for one DEAD_MS window, then
+   drop again until the real stream arrived. Require LIVE_NEED snapshots
+   inside LIVE_WINDOW_MS before painting the connected state. */
+const LIVE_NEED = 2;
+const LIVE_WINDOW_MS = 4000;
 const TICK_MS = 100;    /* age-counter repaint rate */
 
 let deadTimer  = null;
@@ -1187,6 +1205,8 @@ let downReason = 'Awaiting first snapshot';
 let titleTimer = null, titleFlip = false;
 let bridgeUp   = true;    /* what the lab relay last said about itself */
 let towerDead  = false;   /* what the service's last-will last said about the tower */
+let liveHits   = 0;       /* consecutive-ish snapshots toward goUp() */
+let liveFirstAt = 0;
 
 const $  = s => document.querySelector(s);
 const isFresh = key => !!(SEEN[key] && Date.now() - SEEN[key] < DEAD_MS);
@@ -1552,9 +1572,8 @@ function applySnapshot(snap){
      still be measured from when the packet landed, not from when we finished
      drawing it. */
   lastSnapAt = now;
-  armWatchdog();
   recordHistory();
-  goUp();
+  noteLiveSnapshot();   /* re-arm deadline; goUp only after LIVE_NEED frames */
   DEVICES.forEach(renderCard);
   renderLedger();
   renderKpis();
@@ -1596,7 +1615,7 @@ function renderKpis(){
       + 'on-site relay is still forwarding the old channel.';
   }
   $('#devTag').textContent = online + ' OF 4 ONLINE · '
-    + (linkUp ? 'LIVE TELEMETRY' : 'AWAITING DATA');
+    + (linkUp ? 'LIVE' : (wsUp ? 'NO DATA' : 'RECONNECTING'));
   const t = $('#towerState');
   if (t) t.textContent = !linkUp ? (wsUp ? 'Tower silent · 0/4 reporting' : 'Reconnecting to cloud')
     : (online === 4 ? 'Online · 4/4 devices' : 'Online · ' + online + '/4 devices');
@@ -1605,14 +1624,51 @@ function renderKpis(){
 
 /* ---- live stream table ---- */
 const STREAM_MAX = 14;
+/* Present frames in product language. The raw cloud path and transport fields
+   never belong on an operator console; show a short human summary instead. */
+function streamSource(topic){
+  const leaf = topic.slice(topic.lastIndexOf('/') + 1) || topic;
+  if (leaf === 'state')  return 'Tower snapshot';
+  if (leaf === 'status') return 'Tower status';
+  if (leaf === 'bridge') return 'Site relay';
+  return leaf.replace(/[_-]+/g, ' ');
+}
+function streamReading(topic, payload){
+  const leaf = topic.slice(topic.lastIndexOf('/') + 1);
+  if (leaf === 'bridge') return payload.trim() === '1' ? 'Relay online' : 'Relay offline';
+  if (leaf === 'status') {
+    const s = payload.trim().toLowerCase();
+    if (s === 'offline') return 'Tower offline';
+    if (s === 'online')  return 'Tower online';
+    return payload.length > 80 ? payload.slice(0, 80) + '...' : payload;
+  }
+  try {
+    const j = JSON.parse(payload);
+    if (j && typeof j === 'object') {
+      const parts = [];
+      if (j.state) parts.push(String(j.state));
+      if (typeof j.uptime_s === 'number') parts.push('uptime ' + Math.round(j.uptime_s) + 's');
+      DEVICES.forEach(d => {
+        if (j[d.key] && typeof j[d.key] === 'object') {
+          const on = j[d.key].on === false ? 'idle' : 'active';
+          parts.push(d.name.split(' ')[0] + ' ' + on);
+        }
+      });
+      if (parts.length) return parts.join(' | ');
+    }
+  } catch (e) {}
+  const clean = String(payload).replace(/"topic_root"\s*:\s*"[^"]*"\s*,?/g, '')
+    .replace(/"client_id"\s*:\s*"[^"]*"\s*,?/g, '').replace(/,\s*}/g, '}').trim();
+  return clean.length > 120 ? clean.slice(0, 120) + '...' : clean;
+}
 function pushStream(topic, payload){
   const body = $('#streamBody');
   const tr = document.createElement('tr');
   const d = new Date();
   const cells = [
     d.toTimeString().slice(0, 8),
-    topic.replace(CLOUD_ROOT + '/', ''),
-    payload.length > 150 ? payload.slice(0, 150) + '…' : payload
+    streamSource(topic),
+    streamReading(topic, payload)
   ];
   cells.forEach((c, i) => {
     const td = document.createElement('td');
@@ -1624,7 +1680,7 @@ function pushStream(topic, payload){
   });
   body.insertBefore(tr, body.firstChild);
   while (body.children.length > STREAM_MAX) body.removeChild(body.lastChild);
-  $('#streamTag').textContent = msgCount.toLocaleString('en-US') + ' MESSAGES THIS SESSION';
+  $('#streamTag').textContent = msgCount.toLocaleString('en-US') + ' READINGS THIS SESSION';
 }
 
 /* ===========================================================================
@@ -2208,32 +2264,30 @@ function toast(msg){
 /* ---------------------------------------------------------------------------
    Reconnect supervision.
 
-   Coming back up used to be slower and less predictable than going down, which
-   is a strange way round for a monitoring console. Four things caused it:
+   Going down is instant (deadline / socket close / last-will). Coming back up
+   used to lag 3-7 s because of four stacked faults:
 
-     1. Backoff doubled to a 30 s ceiling. While the network was off the socket
-        failed instantly, so a minute of downtime was enough to push the wait to
-        its maximum -- and that was the wait you then served after the network
-        returned.
-     2. The `online` event dialled immediately but did not cancel the retry
-        already queued, so a second dial landed on top of the first.
-     3. Nothing tore down the previous client. Zombie sockets kept firing
-        onclose into the app, each one scheduling yet another retry. That race
-        is why the delay was sometimes 3 s and sometimes 7 s.
-     4. `navigator.onLine` goes true when an interface comes up, which is before
-        DNS and routing are actually usable. The first dial after it fires often
-        fails, and under the old backoff that failure cost another long wait.
+     1. Backoff doubled to a 30 s ceiling while the network was off, so the wait
+        you paid AFTER the network returned was whatever the outage had grown.
+     2. The `online` event dialled without cancelling the already-queued retry.
+     3. Zombie sockets kept firing onclose and scheduling more retries.
+     4. `navigator.onLine` fires before DNS/routing are usable, so the first
+        dial often fails -- and under exponential backoff that cost another wait.
 
-   The fix is a single-flight dialler driven by a 500 ms supervisor tick: only
-   one socket may exist, every dial cancels what came before, backoff starts at
-   400 ms and caps at 8 s, and `online` resets it to near-zero. A dial that
-   fails because routing is not up yet costs 400 ms, not 30 s.
+   Fix: single-flight dialler + a RECOVERY BURST. When the path is expected to
+   be usable again (online event, tab focus, operator retry), we force-redial
+   immediately and retry every ~250 ms for 12 s. Outside that window, backoff
+   starts at 250 ms and caps at 4 s. One socket only; every dial cancels what
+   came before.
    --------------------------------------------------------------------------- */
-const RETRY_MIN = 400, RETRY_MAX = 8000;
+const RETRY_MIN = 250, RETRY_MAX = 4000;
+const RECOVER_MS = 12000;
+const RECOVER_GAP = 250;
 let client = null, retryMs = RETRY_MIN;
 let dialGen = 0;        /* only the newest socket's callbacks are honoured */
 let dialing = false;
 let nextDialAt = 0;
+let recoverUntil = 0;   /* while Date.now() < this, use the burst schedule */
 
 function wsUrl(){
   const p = CLOUD_WSS_PATH.charAt(0) === '/' ? CLOUD_WSS_PATH : '/' + CLOUD_WSS_PATH;
@@ -2344,19 +2398,30 @@ function connect(){
   });
   client.connect();
 }
+function inRecovery(){ return Date.now() < recoverUntil; }
+
 function scheduleRetry(){
-  nextDialAt = Date.now() + retryMs;
-  retryMs = Math.min(Math.round(retryMs * 1.7), RETRY_MAX);  /* polite, but not sleepy */
+  /* During a recovery burst every failed dial costs RECOVER_GAP, not a growing
+     exponential wait -- the network just came back and the first few attempts
+     often fail on DNS. Outside the burst, grow politely up to RETRY_MAX. */
+  if (inRecovery()) {
+    nextDialAt = Date.now() + RECOVER_GAP;
+    retryMs = RETRY_MIN;
+  } else {
+    nextDialAt = Date.now() + retryMs;
+    retryMs = Math.min(Math.round(retryMs * 1.6), RETRY_MAX);
+  }
 }
 
 /* Retries are driven by a tick rather than by a chain of setTimeouts, so there
    is exactly one place that can start a dial and no way to end up with two
-   queued at once. */
+   queued at once. Tick is 200 ms so a recovery burst can actually land every
+   ~250 ms rather than being rounded up by a lazy 500 ms poll. */
 const SILENT_REDIAL_MS = 20000;
 function reconnectTick(){
   if (dialing) return;
 
-  /* Transport is down: this is what the backoff is for. */
+  /* Transport is down: this is what the backoff / burst is for. */
   if (!wsUp) {
     if (Date.now() >= nextDialAt) { try { connect(); } catch (e) { scheduleRetry(); } }
     return;
@@ -2365,7 +2430,7 @@ function reconnectTick(){
 
   /* Socket is healthy but nothing is arriving. Do NOT churn -- redialling a
      good connection every tick would hammer the service and, worse, each
-     successful CONNACK would repaint the chip LIVE while no data was actually
+     successful auth would repaint the chip LIVE while no data was actually
      flowing. A silent tower is a tower problem. The one exception is a very
      long silence, where the subscription itself may have been dropped server
      side; try exactly one re-establish, rate-limited by the same backoff. */
@@ -2374,12 +2439,27 @@ function reconnectTick(){
     try { connect(); } catch (e) {}
   }
 }
-setInterval(reconnectTick, 500);
+setInterval(reconnectTick, 200);
 
-/* Reset the backoff whenever there is fresh reason to believe the path is
-   usable again -- a returning interface, a tab coming back to the foreground,
-   or the operator asking for it. */
+/* Open a recovery window and dial RIGHT NOW. Cancels any in-flight attempt so
+   a half-open socket from the outage cannot poison the new path. */
+function forceRecover(reason){
+  recoverUntil = Date.now() + RECOVER_MS;
+  retryMs = RETRY_MIN;
+  nextDialAt = 0;
+  dialing = false;
+  wsUp = false;
+  if (client) {
+    try { client.detach(); client.disconnect(); } catch (e) {}
+    client = null;
+  }
+  if (reason) paintConn(reason);
+  try { connect(); } catch (e) { scheduleRetry(); }
+}
+
+/* Soft reset used when we only need the schedule cleared, not a hard redial. */
 function resetBackoff(reason){
+  recoverUntil = Date.now() + RECOVER_MS;
   retryMs = RETRY_MIN;
   nextDialAt = 0;
   if (reason) paintConn(reason);
@@ -2405,7 +2485,7 @@ setInterval(() => { rateNow = rateBucket; rateBucket = 0; renderKpis(); }, 1000)
    the watchdog's now. This interval only refreshes the ledger's projections. */
 setInterval(() => { renderLedger(); }, 3000);
 
-$('#mqRoot').textContent = CLOUD_ROOT + '/state';
+if ($('#mqRoot')) $('#mqRoot').textContent = 'Tower UL-04 · Scope 1';
 
 /* The connection facts are diagnostics, not daily reading. Fold them away and
    remember whether this operator left them open. */
@@ -2464,11 +2544,34 @@ function armWatchdog(){
     DEAD_MS);
 }
 
+/* Count live frames toward a stable UP. Already-live links just re-arm the
+   silence deadline. Coming from DOWN needs LIVE_NEED frames so a single
+   retained message cannot flash the whole console green for one second. */
+function noteLiveSnapshot(){
+  armWatchdog();
+  if (linkUp) {
+    liveHits = LIVE_NEED;   /* stay fully confirmed while streaming */
+    return;
+  }
+  const now = Date.now();
+  if (!liveFirstAt || (now - liveFirstAt) > LIVE_WINDOW_MS) {
+    liveFirstAt = now;
+    liveHits = 1;
+  } else {
+    liveHits += 1;
+  }
+  if (liveHits >= LIVE_NEED) goUp();
+}
+
 function goDown(reason){
   clearTimeout(deadTimer);
   if (linkUp || !downSince) downSince = Date.now();
   downReason = reason || 'Link lost';
   linkUp = false;
+  /* Drop the up-confirm counter so the next recovery cannot inherit a half
+     credit from the previous outage and flash LIVE on one orphan frame. */
+  liveHits = 0;
+  liveFirstAt = 0;
   paintLink();
   if (!titleTimer) {
     titleTimer = setInterval(() => {
@@ -2482,6 +2585,7 @@ function goUp(){
   if (linkUp) return;
   const wasDown = everUp && downSince;
   linkUp = true; everUp = true;
+  liveHits = LIVE_NEED;
   if (titleTimer) { clearInterval(titleTimer); titleTimer = null; document.title = BASE_TITLE; }
   /* The charts were first drawn against an empty STATE at boot. The moment real
      telemetry exists, redraw them properly rather than leaving a radar pinned
@@ -2577,11 +2681,9 @@ function ageTick(){
 /* Instant triggers 3-5. */
 window.addEventListener('offline', () => goDown('This computer lost its network'));
 window.addEventListener('online',  () => {
-  /* The interface is up; DNS and routing may be a beat behind, so reset the
-     backoff and let the supervisor retry quickly rather than dialling once and
-     hoping. */
-  resetBackoff('Network restored — reconnecting…');
-  reconnectTick();
+  /* Interface is up; DNS/routing may lag a beat. Tear the old socket down and
+     burst-retry for 12 s so a failed first dial does not cost several seconds. */
+  forceRecover('Network restored — reconnecting…');
 });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
@@ -2590,7 +2692,10 @@ document.addEventListener('visibilitychange', () => {
      fired on time. */
   if (lastSnapAt && Date.now() - lastSnapAt > DEAD_MS) goDown('No data while the tab was hidden');
   else if (lastSnapAt) armWatchdog();
-  if (!linkUp) { resetBackoff(); reconnectTick(); }
+  /* Only force a redial when the socket itself is down. A healthy cloud link
+     with a silent tower must not be torn down — that is a tower problem. */
+  if (!linkUp && !wsUp) forceRecover('Resuming session…');
+  else if (!linkUp) { resetBackoff(); reconnectTick(); }
 });
 
 /* ===========================================================================
@@ -3199,8 +3304,7 @@ $('#rDownload').onclick = downloadReport;
 
 $('#alarmRetry').onclick = () => {
   toast('Reconnecting to UnivLabs Cloud…');
-  resetBackoff();
-  try { connect(); } catch (e) { scheduleRetry(); }
+  forceRecover('Reconnecting…');
 };
 
 setInterval(ageTick, TICK_MS);
